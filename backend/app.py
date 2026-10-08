@@ -17,20 +17,6 @@ def home():
     return "Java Learning Platform Python Backend is working!"
 
 
-@app.route("/api/users", methods=["GET"])
-def get_users():
-
-    cursor = db.cursor(dictionary=True)
-
-    cursor.execute("SELECT * FROM users")
-
-    users = cursor.fetchall()
-
-    cursor.close()
-
-    return jsonify(users)
-
-
 @app.route("/api/auth/google", methods=["POST"])
 def google_login():
 
@@ -45,6 +31,7 @@ def google_login():
 
     try:
 
+        # Verify Google ID token
         user_info = id_token.verify_oauth2_token(
             token,
             requests.Request(),
@@ -109,4 +96,8 @@ def google_login():
 
 
 if __name__ == "__main__":
-    app.run(host="localhost", port=5000, debug=True)
+    app.run(
+        host="localhost",
+        port=5000,
+        debug=True
+    )
