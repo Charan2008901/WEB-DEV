@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<script>
+
+async function handleGoogleLogin(response) {
+
+    const result = await fetch("http://localhost:5000/api/auth/google", {
+        method: "POST",
+
+        headers: {
+            "Content-Type": "application/json"
+        },
+
+        body: JSON.stringify({
+            token: response.credential
+        })
+    });
+
+    const data = await result.json();
+
+    console.log(data);
+
+    if (result.ok) {
+        alert("Welcome " + data.user.name);
+    } else {
+        alert("Login failed");
+    }
+}
+
+</script>
+
+<body>
+    <div id="g_id_onload"
+     data-client_id="127379961848-c8en5st97fhtqvqrr6qe57pqpr9p4s7i.apps.googleusercontent.com"
+     data-callback="handleGoogleLogin">
+</div>
+
+<div class="g_id_signin"
+     data-type="standard"
+     data-size="large">
+</div>
+</body>
+</html>

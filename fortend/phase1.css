@@ -1,0 +1,90 @@
+#phase1-intro {
+    width: 90%;
+    margin: 70px auto;
+    padding: 30px;
+
+    background-color: rgb(254, 224, 158);
+
+    border-radius: 50px;
+
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.20);
+}
+
+
+/* Main heading */
+#phase1-heading {
+    font-size: 32px;
+    font-weight: 900;
+    color: black;
+}
+
+
+/* Other headings */
+#intro-heading,
+#disclaimer-heading,
+#important-heading {
+    font-size: 24px;
+    font-weight: 700;
+    color: black;
+}
+#middle{
+    text-align:center;
+    font-size: 50px;
+    color: rgb(121, 55, 55);
+    margin:60px 0 30px;
+}
+#middle::after{
+    content:"";
+    display:block;
+    width:80%;
+    height:6px;
+    background-color:rgb(108, 22, 22);
+    margin:25px auto 0;
+}
+.main-section{
+    width:90%;
+    margin:50px auto;
+    padding:30px;
+    background-color:white;
+    border-radius: 20px;
+    box-shadow:0 8px 20px rgba(0,0,0,0.20);
+}
+.main-section h2{
+    font-size:30px;
+    padding:0%;
+    text-align:center;
+}
+#ok{
+    font-size :30px;
+    padding:0%;
+    text-align:center;
+    color:rgb(149, 48, 48);
+}
+
+#shi{
+    background-color: rgb(9, 9, 9);
+    color:white;
+    padding:6px;
+    margin: 20px;
+    border-radius: 20px;
+}
+#text{
+    font-size: large;
+    font-weight: 600;
+    font-display: optional;
+    font-style: inherit;
+    color:rgb(62, 12, 12);
+}
+.main-section h4{
+    font-size:30px;
+    padding:0%;
+    text-align:center;
+}
+.main-section h5{
+    font-size:20px;
+    padding:0%;
+    text-align:center;
+}
+#shii{
+    text-align: center;
+}

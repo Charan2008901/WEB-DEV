@@ -1,0 +1,180 @@
+body {
+    background-color: #f7f6f0;
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+}
+
+
+/* Main title */
+#main-title {
+    position: relative;
+    text-align: center;
+    margin-top: 50px;
+    font-size: 36px;
+    font-weight: 900;
+    color: black;
+}
+
+
+/* Curved line under main title */
+#main-title::after {
+    content: "";
+
+    position: absolute;
+    left: 8%;
+    right: 8%;
+    bottom: -15px;
+
+    height: 3px;
+
+    border-bottom: 5px solid black;
+    border-radius: 50%;
+}
+
+
+/* What you will learn */
+#faq1 {
+    position: relative;
+    text-align: left;
+    margin-top: 30px;
+    font-size: 25px;
+    font-weight: 900;
+    color: black;
+}
+
+
+/* Learning points */
+.learning-points {
+    position: absolute;
+    width: fit-content;
+    margin: 50px auto;
+    text-align: left;
+    font-size: 25px;
+}
+
+
+/* Roadmap */
+.roadmap-container {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+
+    position: relative;
+}
+
+
+/* Horizontal roadmap line */
+.roadmap-container::before {
+    content: "";
+
+    position: absolute;
+
+    top: 10px;
+    left: 5%;
+    right: 5%;
+
+    height: 3px;
+    background-color: white;
+
+}
+
+
+/* Individual roadmap item */
+.roadmap-item {
+    width: 22%;
+    padding:25px 15px;
+    margin-top:70px;
+    background-color: #f7f6f0;
+    border-radius: 15px;
+    text-align: center;
+    position: relative;
+    z-index: 1;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.20);
+}
+
+
+/* Dot for every roadmap item */
+.roadmap-item::before {
+    content: "";
+    position: absolute;
+    top: -70px;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    background-color: rgb(113, 43, 43);
+    border-radius: 50%;
+    transform: translateX(-50%);
+}
+
+
+/* Step heading */
+.roadmap-item h3 {
+    margin-top: 0;
+    font-size: 22px;
+}
+
+
+/* Step description */
+.roadmap-item p {
+    font-size: 18px;
+    line-height: 1.4;
+}
+
+.roadmap {
+    width:90%;
+    margin:50px auto;
+    padding:30px;
+    background-color: #ffffff;
+    border-radius: 15px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.20);
+}
+.roadmap h2{
+    margin-top:0;
+    margin-bottom:60px;
+    font-size: 32px;
+    color: rgb(0, 0, 0);
+}
+.roadmap h3{
+    margin-top:0;
+    font-size:21px;
+    color: rgb(138, 80, 80);
+}
+.roadmap-item p{
+    font-size: 18px;
+    line-height: 1.4;
+}
+.buttons{
+    width:90%;
+    margin:60px auto;
+    padding:30px;
+    background-color: #ffffff;
+    border-radius: 15px;
+    text-align:center;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.20);
+}
+.buttons h2{
+    font-size: 32px;
+    margin-bottom: 30px;
+}
+.phase-button{
+    padding:15px 30px;
+    margin:10px;
+    font-size: 18px;
+    font-weight: bold;
+    background-color: #f7f6f0;
+    color:black;
+    border-radius:10px;
+    cursor:pointer;
+}
+footer{
+    background-color:white;
+    box-shadow: white;
+    border-radius: 0 8px 20px white;
+    border-radius: 15px;
+    height:80%;
+    text-align: center;
+    font-size: medium;
+    margin: 40px;
+    box-shadow: 0 8px 150px black;
+}
