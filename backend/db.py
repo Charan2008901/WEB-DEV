@@ -4,6 +4,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+db = None
+
 try:
     db = mysql.connector.connect(
         host=os.getenv("DB_HOST", "localhost"),
@@ -17,4 +19,4 @@ try:
         print("MySQL connected successfully!")
 
 except mysql.connector.Error as err:
-    print(f"Error connecting to MySQL: {err}")
+    print(f"MySQL connection failed: {err}")
