@@ -1,49 +1,166 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-    <link rel="stylesheet" href="style.css">   
+
+    <title>Java Learning Platform</title>
+    <link rel="stylesheet" href="style.css">
+
+    <style>
+        .account-bar {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 15px;
+            padding: 12px 20px;
+        }
+
+        #logout-button {
+            padding: 9px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        #auth-status {
+            text-align: center;
+            padding: 30px;
+        }
+    </style>
 </head>
+
 <body>
-    <h3 id="main-title">Learn HOW TO BUILD Simple Websites...</h3>
-    <section class="roadmap">
-        <h2>Learning Phases</h2>
-        <div class="roadmap-container">
-            <div class="roadmap-item">
-                <h3>Phase 1: How to Make Basic Webpage Using AI.</h3>
-                <p>In This Phase, You Will Learn How to Use AI to Create Basic Web Pages.</p>
+
+    <div id="auth-status">Checking your login...</div>
+
+    <div id="website-content" hidden>
+
+        <div class="account-bar">
+            <span id="user-name"></span>
+            <button id="logout-button" type="button">Log out</button>
+        </div>
+
+        <h3 id="main-title">Learn HOW TO BUILD Simple Websites...</h3>
+
+        <section class="roadmap">
+            <h2>Learning Phases</h2>
+
+            <div class="roadmap-container">
+
+                <div class="roadmap-item">
+                    <h3>Phase 1: How to Make Basic Webpage Using AI.</h3>
+                    <p>In This Phase, You Will Learn How to Use AI to Create Basic Web Pages.</p>
+                </div>
+
+                <div class="roadmap-item">
+                    <h3>Phase 2: How to make the website interactive.</h3>
+                    <p>Learn how to make the basic webpage into interactable website.</p>
+                </div>
+
+                <div class="roadmap-item">
+                    <h3>Phase 3: How to create databases and store users data.</h3>
+                    <p>Using SQL you will learn how to create and manage databases.</p>
+                </div>
+
+                <div class="roadmap-item">
+                    <h3>Phase 4: How to integrate AI & LLM INTO your website and combine all of them.</h3>
+                    <p>Learn how to integrate AI and LLM technologies to your web application.</p>
+                </div>
+
             </div>
-            <div class="roadmap-item">
-                <h3>Phase 2: How to make the website interactive.</h3>
-                <p>Learn how to make the basic webpage into interactable website.</p>
-            </div>
-            <div class="roadmap-item">
-                <h3>Phase 3: How to create databases and store users data.</h3>
-                <p>Using SQL you will learn how to create and manage databases.</p>
-            </div>
-            <div class="roadmap-item">
-                <h3>Phase 4: How to integrate AI & LLM INTO your website  and combine all of them.</h3>
-                <p>Learn how to integrate AI and LLM technologies to your web application</p>
-            </div>
-    </section>
-    <section class ="buttons">
-        <h2>learning Phase.</h2>
-        <a href="phase1.html" >
-        <button class="phase-button">Phase 1</button>
-        </a>
-        <button class="phase-button" >Phase 2</button>
-        <a href="phase3.html" >
-        <button class="phase-button" >Phase 3</button>
-        </a>
-        <button class="phase-button" >Phase 4</button>
-    </section>
-    <footer>
-           <a href="text.txt">
-            <p> Mail.</p>
-           </a>
-    </footer>
+        </section>
+
+        <section class="buttons">
+            <h2>Learning Phase</h2>
+
+            <a href="phase1.html">
+                <button class="phase-button" type="button">Phase 1</button>
+            </a>
+
+            <a href="phase-2.html">
+                <button class="phase-button" type="button">Phase 2</button>
+            </a>
+
+            <a href="phase3.html">
+                <button class="phase-button" type="button">Phase 3</button>
+            </a>
+
+            <button class="phase-button" type="button" disabled>
+                Phase 4 (Coming Soon)
+            </button>
+        </section>
+
+        <footer>
+            <a href="text.txt">
+                <p>Mail.</p>
+            </a>
+        </footer>
+
+    </div>
+
+    <script>
+        const BACKEND_URL =
+            "https://web-dev-backend-g976.onrender.com";
+
+        async function checkLogin() {
+            const token =
+                sessionStorage.getItem("google_id_token");
+
+            if (!token) {
+                window.location.replace("login.html");
+                return;
+            }
+
+            try {
+                const response = await fetch(
+                    BACKEND_URL + "/api/auth/google",
+                    {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({ token: token })
+                    }
+                );
+
+                const data = await response.json();
+
+                if (!response.ok || !data.user) {
+                    throw new Error("Login verification failed");
+                }
+
+                document.getElementById("user-name").textContent =
+                    "Welcome, " + (data.user.name || "Learner");
+
+                document.getElementById("auth-status").hidden = true;
+                document.getElementById("website-content").hidden = false;
+
+            } catch (error) {
+                console.error("Authentication check failed:", error);
+
+                sessionStorage.removeItem("google_id_token");
+
+                document.getElementById("auth-status").textContent =
+                    "Unable to verify your login. Please sign in again.";
+
+                setTimeout(() => {
+                    window.location.replace("login.html");
+                }, 1500);
+            }
+        }
+
+        document.getElementById("logout-button").addEventListener(
+            "click",
+            function () {
+                sessionStorage.removeItem("google_id_token");
+                window.location.replace("login.html");
+            }
+        );
+
+        checkLogin();
+    </script>
 
 </body>
 </html>
