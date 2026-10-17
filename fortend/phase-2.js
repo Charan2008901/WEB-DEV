@@ -1,9 +1,10 @@
+
 "use strict";
 
 /*
  * Phase 2: AI Backend Folder Structure + Flow Visualizer
  * Supports Express.js and Flask.
- * Uses the existing warm beige, brown, and muted gold palette.
+ * Includes a customized AI code-generation prompt.
  */
 
 const API_BASE_URL = "http://127.0.0.1:5000";
@@ -132,6 +133,14 @@ function renderSelectedDemo() {
   latestFolderText = "";
   copyStatus.textContent = "";
   errorMessage.hidden = true;
+
+  // Remove the previous customized prompt when switching frameworks.
+  const codingPromptSection =
+    document.getElementById("codingPromptSection");
+
+  if (codingPromptSection) {
+    codingPromptSection.remove();
+  }
 }
 
 /* Framework switching */
@@ -551,6 +560,237 @@ function renderBackendFlow(plan, framework) {
   });
 }
 
+/* ==========================================
+   CUSTOM AI CODE GENERATION PROMPT
+========================================== */
+
+function renderCodingPrompt(idea, plan, framework) {
+  let section = document.getElementById("codingPromptSection");
+
+  if (!section) {
+    section = document.createElement("section");
+    section.id = "codingPromptSection";
+
+    Object.assign(section.style, {
+      marginTop: "30px",
+      padding: "24px",
+      background: "#fffaf0",
+      border: "1px solid #c9c4ad",
+      borderRadius: "12px",
+      boxShadow: "0 5px 15px rgba(0, 0, 0, 0.08)",
+      boxSizing: "border-box"
+    });
+
+    const heading = document.createElement("h2");
+    heading.textContent = "AI Code Generation Prompt";
+
+    Object.assign(heading.style, {
+      color: "brown",
+      textAlign: "left",
+      marginTop: "0"
+    });
+
+    const description = document.createElement("p");
+    description.textContent =
+      "This prompt is customized to your idea and generated folder structure. Copy it into your preferred AI coding tool to generate your project code.";
+
+    Object.assign(description.style, {
+      color: "#6b5632",
+      lineHeight: "1.6",
+      textAlign: "left"
+    });
+
+    const promptBox = document.createElement("textarea");
+    promptBox.id = "codingPromptText";
+    promptBox.readOnly = true;
+    promptBox.rows = 20;
+    promptBox.setAttribute(
+      "aria-label",
+      "Customized AI code generation prompt"
+    );
+
+    Object.assign(promptBox.style, {
+      display: "block",
+      width: "100%",
+      minHeight: "360px",
+      padding: "16px",
+      boxSizing: "border-box",
+      resize: "vertical",
+      border: "1px solid #c9c4ad",
+      borderRadius: "8px",
+      background: "#ffffff",
+      color: "#263449",
+      font: "14px/1.6 Consolas, monospace",
+      whiteSpace: "pre-wrap",
+      overflowWrap: "anywhere"
+    });
+
+    const actions = document.createElement("div");
+
+    Object.assign(actions.style, {
+      display: "flex",
+      alignItems: "center",
+      flexWrap: "wrap",
+      gap: "14px",
+      marginTop: "14px"
+    });
+
+    const copyPromptButton = document.createElement("button");
+    copyPromptButton.type = "button";
+    copyPromptButton.id = "copyPromptButton";
+    copyPromptButton.textContent = "Copy Prompt";
+
+    Object.assign(copyPromptButton.style, {
+      padding: "11px 20px",
+      border: "none",
+      borderRadius: "7px",
+      background: "brown",
+      color: "#ffffff",
+      fontWeight: "600",
+      cursor: "pointer"
+    });
+
+    const status = document.createElement("span");
+    status.id = "codingPromptStatus";
+    status.setAttribute("role", "status");
+    status.setAttribute("aria-live", "polite");
+    status.style.color = "#6b5632";
+
+    copyPromptButton.addEventListener("click", async () => {
+      const text = promptBox.value;
+
+      if (!text.trim()) {
+        status.textContent = "No prompt is available to copy.";
+        return;
+      }
+
+      try {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(text);
+        } else {
+          promptBox.focus();
+          promptBox.select();
+
+          const copied = document.execCommand("copy");
+
+          if (!copied) {
+            throw new Error("Clipboard copy was blocked.");
+          }
+        }
+
+        status.textContent = "Prompt copied successfully!";
+      } catch (error) {
+        console.error("Prompt copy failed:", error);
+        status.textContent =
+          "Copy failed. Select the prompt and press Ctrl+C.";
+      }
+    });
+
+    actions.append(copyPromptButton, status);
+    section.append(heading, description, promptBox, actions);
+  }
+
+const promptBox = section.querySelector("#codingPromptText");
+const status = section.querySelector("#codingPromptStatus");
+
+  // Build the tree from the actual generated folder plan.
+  const folderTree = [
+    plan.root_name,
+    ...plan.folders.map((item) => {
+      const depth = Math.max(
+        0,
+        item.path.split("/").filter(Boolean).length - 1
+      );
+
+      const indent = "  ".repeat(depth);
+      const type = item.type === "folder" ? "[FOLDER]" : "[FILE]";
+
+      return `${indent}${type} ${item.path} — ${item.purpose}`;
+    })
+  ].join("\n");
+
+  const frameworkDetails = {
+    express: {
+      name: "JavaScript with Node.js and Express.js",
+      setup: "Use npm and the package.json scripts."
+    },
+
+    flask: {
+      name: "Python with Flask",
+      setup: "Use Python, a virtual environment, and requirements.txt."
+    }
+  };
+
+  const selected = frameworkDetails[framework];
+
+  if (!selected) {
+    throw new Error("Please select a supported backend framework.");
+  }
+
+  promptBox.value = `Act as a senior full-stack software engineer.
+
+PROJECT IDEA:
+${idea}
+
+PROJECT SUMMARY:
+${plan.project_summary}
+
+SELECTED BACKEND:
+${selected.name}
+
+YOUR TASK:
+Generate a complete, working implementation based on the user's
+actual project idea and the folder structure provided below.
+
+EXACT GENERATED FOLDER STRUCTURE:
+${folderTree}
+
+REQUIREMENTS:
+1. Follow the project idea and its requested features.
+2. Generate complete code for every required file in the structure.
+3. Keep file names and paths consistent with the generated structure.
+4. Make imports, routes, modules, and file references work together.
+5. Implement the frontend-to-backend integration required by the idea.
+6. Add database models, schemas, and connections where needed.
+7. Validate user input and handle errors appropriately.
+8. Use secure authentication and authorization if required.
+9. Never hardcode passwords, API keys, or other secrets.
+10. Include dependencies and an example environment file when needed.
+11. Do not leave essential features as pseudocode or empty placeholders.
+12. Do not add unrelated features that the user did not request.
+13. If an essential file is missing from the structure, explain why
+    it is needed and show the additional file clearly.
+
+OUTPUT FORMAT:
+1. Briefly explain the project architecture.
+2. Show the final folder structure.
+3. Provide the complete code for each file, one file at a time.
+4. Label every code block with its exact relative file path.
+5. Include dependency installation and environment setup instructions.
+6. Include database setup instructions if a database is required.
+7. Explain how to start and test the project.
+8. Check that imports, API endpoints, and file references are consistent.
+
+SETUP GUIDANCE:
+${selected.setup}
+
+IMPORTANT:
+Use the user's project idea and the exact generated folder structure.
+Do not claim the code has been tested unless it has actually been run.
+Generate code that is consistent across all files.`;
+
+  status.textContent = "";
+
+  // Place the prompt directly below the existing flowchart.
+  const flowSection = document.getElementById("backendFlowSection");
+
+  if (flowSection) {
+    flowSection.insertAdjacentElement("afterend", section);
+  } else {
+    resultSection.append(section);
+  }
+}
+
 /* Submit the website idea to the Flask API */
 ideaForm.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -610,8 +850,11 @@ ideaForm.addEventListener("submit", async (event) => {
     resultSummary.textContent = plan.project_summary;
     latestFolderText = createPlainTextTree(plan);
 
-    /* Show the proposed backend flow */
+    // Keep the existing backend flowchart.
     renderBackendFlow(plan, selectedFramework);
+
+    // NEW: Generate the customized prompt below the flowchart.
+    renderCodingPrompt(idea, plan, selectedFramework);
 
     resultSection.hidden = false;
 

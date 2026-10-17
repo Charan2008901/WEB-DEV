@@ -439,3 +439,88 @@ body > .page > h2 {
     width: 100%;
   }
 }
+
+/* AI Code Generation Prompt */
+.coding-prompt-section {
+  width: 100%;
+  margin-top: 28px;
+  padding: 24px;
+  box-sizing: border-box;
+  background: #fffaf0;
+  border: 1px solid #c9c4ad;
+  border-radius: 12px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.06);
+}
+
+.coding-prompt-section h2 {
+  margin: 0 0 10px;
+  color: brown;
+  text-align: left;
+}
+
+.coding-prompt-description {
+  margin: 0 0 16px;
+  color: #6b5632;
+  line-height: 1.6;
+  text-align: left;
+}
+
+.coding-prompt-text {
+  display: block;
+  width: 100%;
+  min-height: 360px;
+  padding: 16px;
+  box-sizing: border-box;
+  resize: vertical;
+  border: 1px solid #c9c4ad;
+  border-radius: 8px;
+  background: #fff;
+  color: #263449;
+  font: 14px/1.65 Consolas, "Courier New", monospace;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.coding-prompt-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.copy-prompt-button {
+  padding: 11px 20px;
+  border: none;
+  border-radius: 7px;
+  background: brown;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.copy-prompt-button:hover {
+  background: #6b351f;
+}
+
+.copy-prompt-button:focus-visible {
+  outline: 3px solid #b9b38c;
+  outline-offset: 3px;
+}
+
+.coding-prompt-status {
+  color: #6b5632;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+@media (max-width: 600px) {
+  .coding-prompt-section {
+    padding: 16px;
+  }
+
+  .coding-prompt-text {
+    min-height: 300px;
+    font-size: 12px;
+  }
+}
