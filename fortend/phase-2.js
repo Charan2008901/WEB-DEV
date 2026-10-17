@@ -693,6 +693,11 @@ function renderCodingPrompt(idea, plan, framework) {
 const promptBox = section.querySelector("#codingPromptText");
 const status = section.querySelector("#codingPromptStatus");
 
+if (!promptBox || !status) {
+  console.error("Coding prompt textarea or status element is missing.");
+  return;
+}
+
   // Build the tree from the actual generated folder plan.
   const folderTree = [
     plan.root_name,
