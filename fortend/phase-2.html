@@ -1,11 +1,198 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Code Platform — Phase 2</title>
+
+  <link rel="stylesheet" href="./phase-2.css">
+  <script src="./phase-2.js" defer></script>
 </head>
+
 <body>
-    
+  <main class="page">
+    <h2>PHASE:2 BACKEND</h2>
+
+    <section class="hero">
+      <h1>Choose your type</h1>
+      <p>Select your backend framework and describe the website you want to build.</p>
+    </section>
+
+    <section class="framework-tabs" aria-label="Select backend framework">
+
+      <button type="button" class="framework-tab active"
+        data-framework="express" aria-pressed="true">
+        <span class="framework-icon js-icon">JS</span>
+        <span class="framework-copy">
+          <strong>JavaScript + Express.js</strong>
+          <small>Node.js backend</small>
+        </span>
+        <span class="checkmark">✓</span>
+      </button>
+
+      <button type="button" class="framework-tab"
+        data-framework="flask" aria-pressed="false">
+        <span class="framework-icon python-icon">Py</span>
+        <span class="framework-copy">
+          <strong>Python + Flask</strong>
+          <small>Python backend</small>
+        </span>
+        <span class="checkmark">✓</span>
+      </button>
+
+      <!-- Sample folder structure window -->
+      <section class="panel sample-panel">
+        <div class="window-title">📁 Sample Folder Structure</div>
+
+        <div class="panel-heading">
+          <div class="heading-icon">📁</div>
+
+          <div class="heading-text">
+            <h2>Sample backend folder structure</h2>
+            <p id="sampleDescription">
+              A small starter structure for JavaScript + Express.js.
+            </p>
+          </div>
+
+          <span class="framework-badge" id="frameworkBadge">Express.js</span>
+        </div>
+
+        <div id="sampleTree" class="folder-tree"
+          aria-label="Sample folder structure"></div>
+
+        <!-- Advantages and disadvantages -->
+        <section class="backend-comparison">
+          <h3>Which Backend Should You Choose?</h3>
+
+          <p class="comparison-intro">
+            Compare the advantages, disadvantages, and best use cases.
+          </p>
+
+          <div class="comparison-grid">
+
+            <article class="comparison-card express-card">
+              <h4>🟨 JavaScript + Express.js</h4>
+
+              <h5>Advantages</h5>
+              <ul>
+                <li>Use JavaScript on both frontend and backend.</li>
+                <li>Good ecosystem for APIs and real-time apps.</li>
+                <li>Many packages and community resources.</li>
+              </ul>
+
+              <h5>Disadvantages</h5>
+              <ul>
+                <li>Asynchronous programming may take time to learn.</li>
+                <li>Managing dependencies requires care.</li>
+              </ul>
+
+              <div class="best-for">
+                <strong>When to use</strong>
+                <p>
+                  Full-stack JavaScript websites, REST APIs,
+                  chat apps, and real-time features.
+                </p>
+              </div>
+            </article>
+
+            <article class="comparison-card flask-card">
+              <h4>🐍 Python + Flask</h4>
+
+              <h5>Advantages</h5>
+              <ul>
+                <li>Lightweight and simple to get started with.</li>
+                <li>Works well with Python and AI libraries.</li>
+                <li>Flexible for building custom APIs.</li>
+              </ul>
+
+              <h5>Disadvantages</h5>
+              <ul>
+                <li>Extra libraries may be needed for more features.</li>
+                <li>Large projects need careful organization.</li>
+              </ul>
+
+              <div class="best-for">
+                <strong>When to use</strong>
+                <p>
+                  Python projects, AI integrations, and
+                  lightweight web applications or APIs.
+                </p>
+              </div>
+            </article>
+
+          </div>
+
+          <p class="comparison-note">
+            Both frameworks can build many types of websites.
+            Choose according to your project needs and language preference.
+          </p>
+        </section>
+      </section>
+    </section>
+
+    <!-- Website idea form -->
+    <section class="idea-section">
+      <div class="idea-heading">
+        <span class="idea-icon">✧</span>
+        <div>
+          <h2>Describe your website idea</h2>
+          <p>Our AI will understand your idea and design a suitable backend folder structure.</p>
+        </div>
+      </div>
+
+      <form id="ideaForm">
+        <label for="websiteIdea" class="input-label">
+          What do you want to build?
+        </label>
+
+        <textarea id="websiteIdea" name="websiteIdea" rows="4"
+          maxlength="3000" required
+          placeholder="Describe your website idea and its main features..."></textarea>
+
+        <div class="input-footer">
+          <span>Describe the main purpose and features of your website.</span>
+          <span id="characterCount">0 / 3000</span>
+        </div>
+
+        <button type="submit" id="generateButton" class="generate-button">
+          <span>✧</span>
+          <span id="buttonText">Generate Folder Structure</span>
+          <span class="button-arrow">→</span>
+        </button>
+
+        <p class="privacy-note">
+          The AI generates a folder plan only. It does not create or execute code.
+        </p>
+
+        <p id="errorMessage" class="error-message" role="alert" hidden></p>
+      </form>
+    </section>
+
+    <!-- Generated results -->
+    <section id="resultSection" class="panel result-panel" hidden>
+      <div class="panel-heading">
+        <div class="heading-icon">✨</div>
+        <div class="heading-text">
+          <h2>Your generated folder structure</h2>
+          <p id="resultSummary">Customized for your website idea.</p>
+        </div>
+        <span class="ai-badge">AI generated</span>
+      </div>
+
+      <div id="generatedTree" class="folder-tree"></div>
+
+      <div class="result-footer">
+        <button type="button" id="copyButton" class="secondary-button">
+          Copy folder structure
+        </button>
+        <span id="copyStatus" role="status"></span>
+      </div>
+    </section>
+
+    <footer class="page-footer">
+      ✦ AI Code Platform · Phase 2 — Backend Structure Generator
+    </footer>
+  </main>
 </body>
 </html>

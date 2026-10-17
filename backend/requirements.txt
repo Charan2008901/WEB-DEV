@@ -1,3 +1,4 @@
+
 Flask
 flask-cors
 mysql-connector-python
@@ -5,3 +6,4 @@ python-dotenv
 google-auth
 requests
 gunicorn
+google-genai
