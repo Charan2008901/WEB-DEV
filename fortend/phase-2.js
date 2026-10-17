@@ -7,7 +7,7 @@
  * Includes a customized AI code-generation prompt.
  */
 
-const API_BASE_URL = "http://127.0.0.1:5000";
+const API_BASE_URL = "https://web-dev-backend-g976.onrender.com";
 
 const frameworkTabs = document.querySelectorAll(".framework-tab");
 const sampleTree = document.getElementById("sampleTree");
