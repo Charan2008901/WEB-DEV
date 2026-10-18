@@ -1,90 +1,231 @@
+
+/* INTRODUCTION SECTION */
 #phase1-intro {
     width: 90%;
     margin: 70px auto;
     padding: 30px;
-
-    background-color:white;
-
+    background-color: white;
     border-radius: 50px;
-
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.20);
 }
 
-
-/* Main heading */
+/* MAIN HEADING */
 #phase1-heading {
     font-size: 32px;
     font-weight: 900;
     color: black;
 }
 
-
-/* Other headings */
+/* INTRODUCTION HEADINGS */
 #intro-heading,
-#disclaimer-heading,
 #important-heading {
     font-size: 24px;
     font-weight: 700;
     color: black;
 }
-#middle{
-    text-align:center;
-    font-size: 50px;
-    color: rgb(121, 55, 55);
-    margin:60px 0 30px;
-}
-#middle::after{
-    content:"";
-    display:block;
-    width:80%;
-    height:6px;
-    background-color:rgb(108, 22, 22);
-    margin:25px auto 0;
-}
-.main-section{
-    width:90%;
-    margin:50px auto;
-    padding:30px;
-    background-color:white;
-    border-radius: 20px;
-    box-shadow:0 8px 20px rgba(0,0,0,0.20);
-}
-.main-section h2{
-    font-size:30px;
-    padding:0%;
-    text-align:center;
-}
-#ok{
-    font-size :30px;
-    padding:0%;
-    text-align:center;
-    color:rgb(149, 48, 48);
+
+/* INTRODUCTION TEXT */
+#intro-text {
+    font-size: 20px;
+    font-weight: 500;
+    line-height: 1.7;
+    color: rgb(62, 12, 12);
 }
 
-#shi{
-    background-color: rgb(9, 9, 9);
-    color:white;
-    padding:6px;
-    margin: 20px;
-    border-radius: 20px;
+#important-text {
+    font-size: 18px;
+    color: rgb(62, 12, 12);
+    line-height: 1.7;
 }
-#text{
-    font-size: large;
-    font-weight: 600;
-    font-display: optional;
-    font-style: inherit;
-    color:rgb(62, 12, 12);
-}
-.main-section h4{
-    font-size:30px;
-    padding:0%;
-    text-align:center;
-}
-.main-section h5{
-    font-size:20px;
-    padding:0%;
-    text-align:center;
-}
-#shii{
+
+/* PHASE DIVIDER HEADING */
+#middle {
     text-align: center;
+    font-size: 50px;
+    color: rgb(121, 55, 55);
+    margin: 60px 0 30px;
+}
+
+#middle::after {
+    content: "";
+    display: block;
+    width: 80%;
+    height: 6px;
+    background-color: rgb(108, 22, 22);
+    margin: 25px auto 0;
+}
+
+/* MAIN STEP CARDS */
+.main-section {
+    width: 90%;
+    margin: 50px auto;
+    padding: 30px;
+    background-color: white;
+    border-radius: 20px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.20);
+    box-sizing: border-box;
+}
+
+.main-section h2 {
+    font-size: 30px;
+    padding: 0;
+    text-align: center;
+    color: black;
+}
+
+.step-title {
+    font-size: 30px;
+    padding: 0;
+    text-align: center;
+    color: rgb(149, 48, 48);
+    font-weight: 600;
+}
+
+.main-section h5 {
+    font-size: 20px;
+    padding: 0;
+    text-align: center;
+    line-height: 1.6;
+    font-weight: 500;
+}
+
+/* TECHNOLOGY STACKS HEADING */
+#stack-heading {
+    text-align: center;
+    font-size: 40px;
+    font-weight: 900;
+    color: rgb(121, 55, 55);
+    margin: 80px 0 30px;
+}
+
+#stack-heading::after {
+    content: "";
+    display: block;
+    width: 80%;
+    height: 6px;
+    background-color: rgb(108, 22, 22);
+    margin: 25px auto 0;
+}
+
+/* TECHNOLOGY STACKS INTRODUCTION */
+.stack-introduction {
+    width: 90%;
+    margin: 40px auto;
+    padding: 30px;
+    background-color: white;
+    border-radius: 20px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.20);
+    box-sizing: border-box;
+}
+
+.stack-introduction p {
+    font-size: 20px;
+    font-weight: 600;
+    color: rgb(62, 12, 12);
+    text-align: center;
+    line-height: 1.7;
+}
+
+/* INDIVIDUAL STACK CARDS */
+.stack-card h2 {
+    color: rgb(121, 55, 55);
+    margin-bottom: 15px;
+}
+
+.stack-description {
+    font-size: 20px;
+    font-weight: 600;
+    color: rgb(121, 55, 55);
+    text-align: center;
+    line-height: 1.6;
+}
+
+.stack-card h3 {
+    font-size: 22px;
+    padding: 0;
+    text-align: center;
+    color: rgb(108, 22, 22);
+    margin: 30px 0 10px;
+}
+
+.stack-card p {
+    font-size: 19px;
+    color: rgb(62, 12, 12);
+    text-align: center;
+    line-height: 1.7;
+}
+
+/* STACK USES LIST */
+.stack-card ul {
+    width: fit-content;
+    max-width: 90%;
+    margin: 15px auto;
+    padding-left: 30px;
+    color: rgb(62, 12, 12);
+    font-size: 19px;
+    line-height: 1.9;
+}
+
+/* MOBILE RESPONSIVENESS */
+@media (max-width: 600px) {
+
+    #phase1-intro {
+        width: 95%;
+        padding: 20px;
+        border-radius: 30px;
+        box-sizing: border-box;
+    }
+
+    #phase1-heading {
+        font-size: 28px;
+    }
+
+    #intro-text {
+        font-size: 17px;
+    }
+
+    #middle {
+        font-size: 38px;
+    }
+
+    .main-section {
+        width: 95%;
+        padding: 20px;
+    }
+
+    .main-section h2 {
+        font-size: 26px;
+    }
+
+    .step-title {
+        font-size: 25px;
+    }
+
+    .main-section h5 {
+        font-size: 17px;
+    }
+
+    #stack-heading {
+        font-size: 29px;
+        margin-top: 60px;
+    }
+
+    .stack-introduction {
+        width: 95%;
+        padding: 20px;
+    }
+
+    .stack-introduction p,
+    .stack-description {
+        font-size: 17px;
+    }
+
+    .stack-card h3 {
+        font-size: 20px;
+    }
+
+    .stack-card p,
+    .stack-card ul {
+        font-size: 17px;
+    }
 }
