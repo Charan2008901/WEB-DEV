@@ -26,6 +26,15 @@ const generatedTree = document.getElementById("generatedTree");
 const copyButton = document.getElementById("copyButton");
 const copyStatus = document.getElementById("copyStatus");
 
+const supportedFrameworks = new Set([
+  "mern",
+  "mean",
+  "django",
+  "lamp",
+  "flask",
+  "spring"
+]);
+
 let selectedFramework = "mern";
 let latestFolderText = "";
 
@@ -232,9 +241,15 @@ function renderSelectedDemo() {
 /* Framework switching */
 frameworkTabs.forEach((tab) => {
   tab.addEventListener("click", () => {
-    const framework = tab.dataset.framework;
+    const framework = (tab.dataset.framework || "").trim().toLowerCase();
 
-    if (!frameworkNames[framework]) return;
+    if (
+      !supportedFrameworks.has(framework) ||
+      !frameworkNames[framework]
+    ) {
+      console.warn("Ignoring unsupported framework tab:", framework);
+      return;
+    }
 
     selectedFramework = framework;
     renderSelectedDemo();
@@ -910,6 +925,15 @@ ideaForm.addEventListener("submit", async (event) => {
   event.preventDefault();
 
   const idea = websiteIdea.value.trim();
+
+  // Validate the selected stack before sending the request.
+  if (!supportedFrameworks.has(selectedFramework)) {
+    errorMessage.textContent =
+      "Please select one of the six supported stacks: MERN, MEAN, Django, LAMP, Flask, or Spring Boot.";
+
+    errorMessage.hidden = false;
+    return;
+  }
 
   if (idea.length < 10) {
     errorMessage.textContent =
