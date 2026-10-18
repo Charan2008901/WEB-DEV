@@ -16,32 +16,71 @@
 
     <section class="hero">
       <h1>Choose your type</h1>
-      <p>Select your backend framework and describe the website you want to build.</p>
+      <p>Select a web development stack and describe the website you want to build.</p>
     </section>
 
-    <section class="framework-tabs" aria-label="Select backend framework">
+    <section class="framework-tabs" aria-label="Select a web development stack">
 
       <button type="button" class="framework-tab active"
-        data-framework="express" aria-pressed="true">
-        <span class="framework-icon js-icon">JS</span>
+        data-framework="mern" aria-pressed="true">
+        <span class="framework-icon">JS</span>
         <span class="framework-copy">
-          <strong>JavaScript + Express.js</strong>
-          <small>Node.js backend</small>
+          <strong>MERN Stack</strong>
+          <small>MongoDB · Express · React · Node.js</small>
+        </span>
+        <span class="checkmark">✓</span>
+      </button>
+
+      <button type="button" class="framework-tab"
+        data-framework="mean" aria-pressed="false">
+        <span class="framework-icon">JS</span>
+        <span class="framework-copy">
+          <strong>MEAN Stack</strong>
+          <small>MongoDB · Express · Angular · Node.js</small>
+        </span>
+        <span class="checkmark">✓</span>
+      </button>
+
+      <button type="button" class="framework-tab"
+        data-framework="django" aria-pressed="false">
+        <span class="framework-icon">Py</span>
+        <span class="framework-copy">
+          <strong>Python + Django</strong>
+          <small>Python web framework</small>
+        </span>
+        <span class="checkmark">✓</span>
+      </button>
+
+      <button type="button" class="framework-tab"
+        data-framework="lamp" aria-pressed="false">
+        <span class="framework-icon">PHP</span>
+        <span class="framework-copy">
+          <strong>LAMP Stack</strong>
+          <small>Linux · Apache · MySQL · PHP</small>
         </span>
         <span class="checkmark">✓</span>
       </button>
 
       <button type="button" class="framework-tab"
         data-framework="flask" aria-pressed="false">
-        <span class="framework-icon python-icon">Py</span>
+        <span class="framework-icon">Py</span>
         <span class="framework-copy">
           <strong>Python + Flask</strong>
-          <small>Python backend</small>
+          <small>Lightweight Python backend</small>
         </span>
         <span class="checkmark">✓</span>
       </button>
 
-      <!-- Sample folder structure window -->
+      <button type="button" class="framework-tab"
+        data-framework="spring" aria-pressed="false">
+        <span class="framework-icon">Java</span>
+        <span class="framework-copy">
+          <strong>Java Spring Boot</strong>
+          <small>Java application backend</small>
+        </span>
+        <span class="checkmark">✓</span>
+      </button>
+
       <section class="panel sample-panel">
         <div class="window-title">📁 Sample Folder Structure</div>
 
@@ -51,19 +90,18 @@
           <div class="heading-text">
             <h2>Sample backend folder structure</h2>
             <p id="sampleDescription">
-              A small starter structure for JavaScript + Express.js.
+              A starter structure for the selected stack.
             </p>
           </div>
 
-          <span class="framework-badge" id="frameworkBadge">Express.js</span>
+          <span class="framework-badge" id="frameworkBadge">MERN</span>
         </div>
 
         <div id="sampleTree" class="folder-tree"
           aria-label="Sample folder structure"></div>
 
-        <!-- Advantages and disadvantages -->
         <section class="backend-comparison">
-          <h3>Which Backend Should You Choose?</h3>
+          <h3>Which Stack Should You Choose?</h3>
 
           <p class="comparison-intro">
             Compare the advantages, disadvantages, and best use cases.
@@ -72,66 +110,129 @@
           <div class="comparison-grid">
 
             <article class="comparison-card express-card">
-              <h4>🟨 JavaScript + Express.js</h4>
-
+              <h4>🟨 MERN Stack</h4>
               <h5>Advantages</h5>
               <ul>
-                <li>Use JavaScript on both frontend and backend.</li>
-                <li>Good ecosystem for APIs and real-time apps.</li>
-                <li>Many packages and community resources.</li>
+                <li>Uses JavaScript across the frontend and backend.</li>
+                <li>React supports interactive user interfaces.</li>
+                <li>MongoDB provides a flexible document database.</li>
               </ul>
-
               <h5>Disadvantages</h5>
               <ul>
-                <li>Asynchronous programming may take time to learn.</li>
-                <li>Managing dependencies requires care.</li>
+                <li>Requires learning React, Node.js, and database concepts.</li>
+                <li>MongoDB may not be the best fit for every relational data model.</li>
               </ul>
-
               <div class="best-for">
                 <strong>When to use</strong>
-                <p>
-                  Full-stack JavaScript websites, REST APIs,
-                  chat apps, and real-time features.
-                </p>
+                <p>Interactive websites, dashboards, social apps, and e-commerce projects.</p>
+              </div>
+            </article>
+
+            <article class="comparison-card express-card">
+              <h4>🟨 MEAN Stack</h4>
+              <h5>Advantages</h5>
+              <ul>
+                <li>Uses JavaScript and TypeScript-friendly tooling.</li>
+                <li>Angular provides a structured application framework.</li>
+                <li>Node.js and Express support API development.</li>
+              </ul>
+              <h5>Disadvantages</h5>
+              <ul>
+                <li>Angular has a steeper learning curve for beginners.</li>
+                <li>There are several technologies to configure and maintain.</li>
+              </ul>
+              <div class="best-for">
+                <strong>When to use</strong>
+                <p>Structured business applications, complex dashboards, and large single-page apps.</p>
+              </div>
+            </article>
+
+            <article class="comparison-card flask-card">
+              <h4>🐍 Python + Django</h4>
+              <h5>Advantages</h5>
+              <ul>
+                <li>Includes authentication, an admin interface, and an ORM.</li>
+                <li>Provides a structured approach to larger applications.</li>
+                <li>Includes useful security protections.</li>
+              </ul>
+              <h5>Disadvantages</h5>
+              <ul>
+                <li>Has more built-in concepts to learn initially.</li>
+                <li>May be heavier than necessary for a tiny API.</li>
+              </ul>
+              <div class="best-for">
+                <strong>When to use</strong>
+                <p>Content platforms, e-learning websites, booking systems, and database-heavy applications.</p>
+              </div>
+            </article>
+
+            <article class="comparison-card flask-card">
+              <h4>🐘 LAMP Stack</h4>
+              <h5>Advantages</h5>
+              <ul>
+                <li>Uses widely available PHP and MySQL hosting.</li>
+                <li>Works well for traditional server-rendered websites.</li>
+                <li>Has a large ecosystem of tools and resources.</li>
+              </ul>
+              <h5>Disadvantages</h5>
+              <ul>
+                <li>Requires understanding PHP and server configuration.</li>
+                <li>Linux and Apache administration may add complexity.</li>
+              </ul>
+              <div class="best-for">
+                <strong>When to use</strong>
+                <p>PHP websites, content management systems, and traditional database-driven applications.</p>
               </div>
             </article>
 
             <article class="comparison-card flask-card">
               <h4>🐍 Python + Flask</h4>
-
               <h5>Advantages</h5>
               <ul>
-                <li>Lightweight and simple to get started with.</li>
+                <li>Lightweight and straightforward to start with.</li>
                 <li>Works well with Python and AI libraries.</li>
-                <li>Flexible for building custom APIs.</li>
+                <li>Flexible for custom APIs and services.</li>
               </ul>
-
               <h5>Disadvantages</h5>
               <ul>
-                <li>Extra libraries may be needed for more features.</li>
-                <li>Large projects need careful organization.</li>
+                <li>Often requires extra libraries for additional features.</li>
+                <li>Larger projects need deliberate organization.</li>
               </ul>
-
               <div class="best-for">
                 <strong>When to use</strong>
-                <p>
-                  Python projects, AI integrations, and
-                  lightweight web applications or APIs.
-                </p>
+                <p>AI integrations, small or medium web apps, and custom REST APIs.</p>
+              </div>
+            </article>
+
+            <article class="comparison-card express-card">
+              <h4>☕ Java Spring Boot</h4>
+              <h5>Advantages</h5>
+              <ul>
+                <li>Provides strong application structure and dependency injection.</li>
+                <li>Supports validation, security, and database integrations.</li>
+                <li>Suitable for complex, long-running business applications.</li>
+              </ul>
+              <h5>Disadvantages</h5>
+              <ul>
+                <li>Requires learning Java and its ecosystem.</li>
+                <li>Configuration and project structure can feel complex initially.</li>
+              </ul>
+              <div class="best-for">
+                <strong>When to use</strong>
+                <p>Enterprise systems, financial applications, and large business APIs.</p>
               </div>
             </article>
 
           </div>
 
           <p class="comparison-note">
-            Both frameworks can build many types of websites.
-            Choose according to your project needs and language preference.
+            These stacks are starting points, not strict rules. Choose according
+            to your project requirements, preferred language, and database needs.
           </p>
         </section>
       </section>
     </section>
 
-    <!-- Website idea form -->
     <section class="idea-section">
       <div class="idea-heading">
         <span class="idea-icon">✧</span>
@@ -169,7 +270,6 @@
       </form>
     </section>
 
-    <!-- Generated results -->
     <section id="resultSection" class="panel result-panel" hidden>
       <div class="panel-heading">
         <div class="heading-icon">✨</div>

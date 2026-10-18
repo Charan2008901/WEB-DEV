@@ -6,14 +6,15 @@
 body {
   background-color: antiquewhite;
   margin: 0;
-  padding: 30px 20px;
+  padding: 20px;
   font-family: Arial, sans-serif;
   color: #263449;
 }
 
 .page {
-  max-width: 1100px;
-  margin: auto;
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
   padding: 24px;
   background: transparent;
   border-radius: 0;
@@ -38,7 +39,7 @@ body > .page > h2 {
   line-height: 1.6;
 }
 
-/* Framework tabs */
+/* Six stack options */
 .framework-tabs {
   display: flex;
   flex-wrap: wrap;
@@ -46,16 +47,18 @@ body > .page > h2 {
   align-items: stretch;
   gap: 15px;
   width: 100%;
-  max-width: 900px;
+  max-width: 1200px;
   margin: 24px auto 0;
 }
 
 .framework-tabs > .framework-tab {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 12px 20px;
+  justify-content: flex-start;
+  gap: 10px;
+  flex: 1 1 calc(33.333% - 15px);
+  min-width: 220px;
+  padding: 12px 16px;
   background: #e5e7eb;
   border: 1px solid #b9b8b0;
   border-radius: 10px 10px 0 0;
@@ -64,6 +67,8 @@ body > .page > h2 {
   z-index: 2;
   font-size: 14px;
   font-family: inherit;
+  text-align: left;
+  color: #263449;
 }
 
 .framework-tab:hover {
@@ -78,24 +83,44 @@ body > .page > h2 {
   font-weight: 600;
 }
 
+.framework-tab:focus-visible {
+  outline: 3px solid #b9b38c;
+  outline-offset: 2px;
+}
+
 .framework-copy {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 4px;
+  min-width: 0;
+}
+
+.framework-copy strong {
+  line-height: 1.4;
 }
 
 .framework-copy small {
   font-size: 12px;
   font-weight: normal;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
 }
 
 .framework-icon {
+  flex: 0 0 auto;
   font-weight: bold;
+  font-size: 12px;
 }
 
 .checkmark {
   color: #48845a;
+  margin-left: auto;
+  visibility: hidden;
+}
+
+.framework-tab.active .checkmark {
+  visibility: visible;
 }
 
 /* Sample folder window */
@@ -103,7 +128,7 @@ body > .page > h2 {
   display: block;
   flex-basis: 100%;
   width: 100%;
-  max-width: 900px;
+  max-width: 1200px;
   margin: -15px auto 30px;
   padding: 24px;
   background: #fff;
@@ -125,7 +150,6 @@ body > .page > h2 {
   font-weight: 600;
 }
 
-/* Sample window heading */
 .panel-heading {
   display: flex;
   align-items: center;
@@ -154,10 +178,12 @@ body > .page > h2 {
   background: #f1f5f9;
   border-radius: 20px;
   font-size: 12px;
+  white-space: nowrap;
 }
 
 /* Folder tree */
 .folder-tree {
+  width: 100%;
   padding: 18px;
   background: #faf9f5;
   border: 1px solid #e5e1d5;
@@ -167,12 +193,22 @@ body > .page > h2 {
   overflow-x: auto;
 }
 
-.folder-tree .tree-item {
+.folder-tree .tree-row {
   display: grid;
-  grid-template-columns: minmax(180px, 240px) minmax(0, 1fr);
-  gap: 20px;
+  grid-template-columns: 24px minmax(180px, 280px) minmax(0, 1fr);
+  gap: 12px;
   align-items: start;
   padding: 5px 0;
+}
+
+.folder-tree .root-row {
+  padding-bottom: 10px;
+  margin-bottom: 5px;
+  border-bottom: 1px solid #e5e1d5;
+}
+
+.tree-icon {
+  white-space: nowrap;
 }
 
 .folder-tree .tree-name {
@@ -180,7 +216,7 @@ body > .page > h2 {
   overflow-wrap: anywhere;
 }
 
-.folder-tree .tree-description {
+.folder-tree .tree-purpose {
   color: #64748b;
   overflow-wrap: anywhere;
 }
@@ -279,7 +315,8 @@ body > .page > h2 {
 
 /* Website idea form */
 .idea-section {
-  max-width: 900px;
+  width: 100%;
+  max-width: 1200px;
   margin: 35px auto;
 }
 
@@ -305,6 +342,11 @@ body > .page > h2 {
   border-radius: 8px;
   font: inherit;
   resize: vertical;
+}
+
+#websiteIdea:focus-visible {
+  outline: 2px solid #b9b38c;
+  outline-offset: 2px;
 }
 
 .input-footer {
@@ -341,6 +383,11 @@ body > .page > h2 {
   background: #1946b5;
 }
 
+.generate-button:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
+
 .privacy-note {
   color: #64748b;
   font-size: 12px;
@@ -349,11 +396,14 @@ body > .page > h2 {
 
 .error-message {
   color: #b42318;
+  text-align: left;
+  line-height: 1.6;
 }
 
 /* Generated results */
 .result-panel {
-  max-width: 900px;
+  width: 100%;
+  max-width: 1200px;
   margin: 30px auto;
   padding: 24px;
   background: white;
@@ -371,6 +421,11 @@ body > .page > h2 {
   border-radius: 8px;
   background: #fff;
   cursor: pointer;
+  color: #263449;
+}
+
+.secondary-button:hover {
+  background: #f1eee3;
 }
 
 .result-footer {
@@ -381,6 +436,11 @@ body > .page > h2 {
   margin-top: 18px;
 }
 
+#copyStatus {
+  color: #48845a;
+  font-size: 13px;
+}
+
 .page-footer {
   padding: 20px 0 5px;
   text-align: center;
@@ -388,59 +448,7 @@ body > .page > h2 {
   font-size: 13px;
 }
 
-/* Responsive layout */
-@media (max-width: 650px) {
-  body {
-    padding: 16px 10px;
-  }
-
-  .page {
-    padding: 12px;
-  }
-
-  .framework-tabs {
-    gap: 8px;
-  }
-
-  .framework-tabs > .framework-tab {
-    width: 100%;
-    max-width: 100%;
-    justify-content: flex-start;
-  }
-
-  .framework-tabs > .sample-panel {
-    margin-top: 0;
-    padding: 16px;
-  }
-
-  .window-title {
-    margin: -16px -16px 18px;
-  }
-
-  .comparison-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .comparison-card {
-    padding: 16px;
-  }
-
-  .folder-tree .tree-item {
-    grid-template-columns: 1fr;
-    gap: 0;
-    margin-bottom: 10px;
-  }
-
-  .folder-tree .tree-description {
-    padding-left: 24px;
-  }
-
-  .idea-section {
-    width: 100%;
-  }
-}
-
-/* AI Code Generation Prompt */
+/* Existing AI coding prompt styling */
 .coding-prompt-section {
   width: 100%;
   margin-top: 28px;
@@ -514,7 +522,76 @@ body > .page > h2 {
   line-height: 1.5;
 }
 
-@media (max-width: 600px) {
+/* Responsive layout */
+@media (max-width: 800px) {
+  body {
+    padding: 16px;
+  }
+
+  .page {
+    padding: 16px;
+  }
+
+  .framework-tabs > .framework-tab {
+    flex-basis: calc(50% - 15px);
+  }
+
+  .comparison-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .folder-tree .tree-row {
+    grid-template-columns: 24px minmax(140px, 220px) minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 650px) {
+  body {
+    padding: 12px 8px;
+  }
+
+  .page {
+    padding: 10px;
+  }
+
+  .framework-tabs {
+    gap: 8px;
+  }
+
+  .framework-tabs > .framework-tab {
+    flex: 1 1 100%;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    justify-content: flex-start;
+  }
+
+  .framework-tabs > .sample-panel {
+    margin-top: 0;
+    padding: 16px;
+  }
+
+  .window-title {
+    margin: -16px -16px 18px;
+  }
+
+  .comparison-card {
+    padding: 16px;
+  }
+
+  .folder-tree .tree-row {
+    grid-template-columns: 24px minmax(0, 1fr);
+    gap: 4px 8px;
+  }
+
+  .folder-tree .tree-purpose {
+    grid-column: 2;
+  }
+
+  .idea-section {
+    width: 100%;
+  }
+
   .coding-prompt-section {
     padding: 16px;
   }
@@ -522,5 +599,9 @@ body > .page > h2 {
   .coding-prompt-text {
     min-height: 300px;
     font-size: 12px;
+  }
+
+  .result-panel {
+    padding: 16px;
   }
 }

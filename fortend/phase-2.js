@@ -1,9 +1,8 @@
-
 "use strict";
 
 /*
  * Phase 2: AI Backend Folder Structure + Flow Visualizer
- * Supports Express.js and Flask.
+ * Supports MERN, MEAN, Django, LAMP, Flask, and Spring Boot.
  * Includes a customized AI code-generation prompt.
  */
 
@@ -27,41 +26,128 @@ const generatedTree = document.getElementById("generatedTree");
 const copyButton = document.getElementById("copyButton");
 const copyStatus = document.getElementById("copyStatus");
 
-let selectedFramework = "express";
+let selectedFramework = "mern";
 let latestFolderText = "";
 
-/* Sample folder structures */
+/* Sample folder structures for all six supported stacks */
 const demoTrees = {
-  express: [
-    { path: "package.json", type: "file", purpose: "Project dependencies and scripts" },
-    { path: "server.js", type: "file", purpose: "Starts the Express server" },
-    { path: "src/", type: "folder", purpose: "Application code" },
-    { path: "src/routes/", type: "folder", purpose: "API endpoints" },
+  mern: [
+    { path: "package.json", type: "file", purpose: "Node.js project dependencies and scripts" },
+    { path: "server.js", type: "file", purpose: "Starts the Express API server" },
+    { path: "src/config/db.js", type: "file", purpose: "Connects the backend to MongoDB" },
+    { path: "src/models/", type: "folder", purpose: "Mongoose data models" },
+    { path: "src/routes/", type: "folder", purpose: "Express API endpoints" },
+    { path: "src/controllers/", type: "folder", purpose: "Handles API requests" },
+    { path: ".env.example", type: "file", purpose: "Example environment variables" }
+  ],
+
+  mean: [
+    { path: "package.json", type: "file", purpose: "Node.js project dependencies and scripts" },
+    { path: "server.js", type: "file", purpose: "Starts the Express API server" },
+    { path: "src/config/db.js", type: "file", purpose: "Connects the backend to MongoDB" },
+    { path: "src/models/", type: "folder", purpose: "Mongoose data models" },
+    { path: "src/routes/", type: "folder", purpose: "Express API endpoints" },
+    { path: "src/controllers/", type: "folder", purpose: "Handles API requests" },
+    { path: ".env.example", type: "file", purpose: "Example environment variables" }
+  ],
+
+  django: [
+    { path: "manage.py", type: "file", purpose: "Django command-line entry point" },
+    { path: "requirements.txt", type: "file", purpose: "Python dependencies" },
+    { path: "config/settings.py", type: "file", purpose: "Django project settings" },
+    { path: "config/urls.py", type: "file", purpose: "Top-level URL routing" },
+    { path: "apps/core/models.py", type: "file", purpose: "Database models for the core app" },
+    { path: "apps/core/views.py", type: "file", purpose: "Request handlers and API logic" },
+    { path: "apps/core/urls.py", type: "file", purpose: "App-specific URL patterns" },
+    { path: ".env.example", type: "file", purpose: "Example environment variables" }
+  ],
+
+  lamp: [
+    { path: "public/index.php", type: "file", purpose: "PHP application entry point" },
+    { path: "public/.htaccess", type: "file", purpose: "Apache routing and access rules" },
+    { path: "src/config/database.php", type: "file", purpose: "Connects PHP to MySQL" },
+    { path: "src/routes/", type: "folder", purpose: "Maps URLs to application handlers" },
     { path: "src/controllers/", type: "folder", purpose: "Handles incoming requests" },
-    { path: ".env.example", type: "file", purpose: "Example environment settings" }
+    { path: "src/models/", type: "folder", purpose: "MySQL data access and models" },
+    { path: "src/views/", type: "folder", purpose: "PHP templates" },
+    { path: "composer.json", type: "file", purpose: "PHP dependencies and autoload configuration" },
+    { path: ".env.example", type: "file", purpose: "Example environment variables" }
   ],
 
   flask: [
-    { path: "app.py", type: "file", purpose: "Flask application and API routes" },
+    { path: "app.py", type: "file", purpose: "Creates the Flask application and API routes" },
     { path: "requirements.txt", type: "file", purpose: "Python dependencies" },
-    { path: "routes/", type: "folder", purpose: "API endpoints" },
+    { path: "routes/", type: "folder", purpose: "API endpoints or Flask blueprints" },
     { path: "models.py", type: "file", purpose: "Data models" },
-    { path: "db.py", type: "file", purpose: "Database connection" },
-    { path: ".env.example", type: "file", purpose: "Example environment settings" }
+    { path: "db.py", type: "file", purpose: "Database connection helpers" },
+    { path: ".env.example", type: "file", purpose: "Example environment variables" }
+  ],
+
+  spring: [
+    { path: "pom.xml", type: "file", purpose: "Maven dependencies and build configuration" },
+    { path: "src/main/java/com/example/app/Application.java", type: "file", purpose: "Spring Boot application entry point" },
+    { path: "src/main/java/com/example/app/controller/", type: "folder", purpose: "REST API controllers" },
+    { path: "src/main/java/com/example/app/service/", type: "folder", purpose: "Application business logic" },
+    { path: "src/main/java/com/example/app/repository/", type: "folder", purpose: "Database access interfaces" },
+    { path: "src/main/java/com/example/app/model/", type: "folder", purpose: "Entity and data model classes" },
+    { path: "src/main/resources/application.properties", type: "file", purpose: "Spring Boot configuration" },
+    { path: ".env.example", type: "file", purpose: "Example environment variables" }
   ]
 };
 
 const frameworkNames = {
-  express: {
-    name: "JavaScript + Express.js",
-    shortName: "Express.js",
-    description: "A starter structure for a JavaScript + Express.js backend."
+  mern: {
+    name: "MERN (MongoDB, Express, React, Node.js)",
+    shortName: "MERN",
+    description: "A starter backend structure for a MERN application, using Node.js, Express, and MongoDB.",
+    entryFile: "server.js",
+    responseFile: "server.js",
+    requestDescription: "The Node.js and Express server receives an HTTP request from the React frontend."
+  },
+
+  mean: {
+    name: "MEAN (MongoDB, Express, Angular, Node.js)",
+    shortName: "MEAN",
+    description: "A starter backend structure for a MEAN application, using Node.js, Express, and MongoDB with an Angular frontend.",
+    entryFile: "server.js",
+    responseFile: "server.js",
+    requestDescription: "The Node.js and Express server receives an HTTP request from the Angular frontend."
+  },
+
+  django: {
+    name: "Python + Django",
+    shortName: "Django",
+    description: "A starter structure for a Python + Django backend with project settings, URL routing, and app modules.",
+    entryFile: "manage.py / config/urls.py",
+    responseFile: "config/urls.py",
+    requestDescription: "Django receives the HTTP request and routes it through the project's URL configuration."
+  },
+
+  lamp: {
+    name: "LAMP (Linux, Apache, MySQL, PHP)",
+    shortName: "LAMP",
+    description: "A starter structure for a PHP application served by Apache and connected to MySQL.",
+    entryFile: "public/index.php",
+    responseFile: "public/index.php",
+    requestDescription: "Apache serves the PHP application and forwards the request to its entry point."
   },
 
   flask: {
     name: "Python + Flask",
     shortName: "Flask",
-    description: "A starter structure for a Python + Flask backend."
+    description: "A starter structure for a Python + Flask backend with routes, data models, and database helpers.",
+    entryFile: "app.py",
+    responseFile: "app.py",
+    requestDescription: "The Flask application receives an HTTP request from the frontend."
+  },
+
+  spring: {
+    name: "Java + Spring Boot",
+    shortName: "Spring Boot",
+    description: "A starter structure for a Java Spring Boot backend with controllers, services, repositories, and models.",
+    entryFile: "Application.java",
+    responseFile: "Application.java",
+    requestDescription: "The Spring Boot application receives the HTTP request and routes it to a REST controller."
   }
 };
 
@@ -299,15 +385,13 @@ function createFlowSection() {
 /* Identify possible backend components from generated paths */
 function inferFlowStages(plan, framework) {
   const entries = plan.folders;
+  const frameworkInfo = frameworkNames[framework];
 
   function findEntry(patterns) {
     return entries.find((entry) => {
-      const searchable =
-        `${entry.path} ${entry.purpose}`.toLowerCase();
+      const searchable = `${entry.path} ${entry.purpose}`.toLowerCase();
 
-      return patterns.some((pattern) =>
-        searchable.includes(pattern)
-      );
+      return patterns.some((pattern) => searchable.includes(pattern));
     });
   }
 
@@ -316,12 +400,16 @@ function inferFlowStages(plan, framework) {
     "route",
     "endpoint",
     "api/",
-    "blueprint"
+    "blueprint",
+    "urls.py",
+    "url mapping"
   ]);
 
   const controllerEntry = findEntry([
     "controller",
+    "handlers",
     "handler",
+    "views.py",
     "view function",
     "request handler"
   ]);
@@ -365,16 +453,11 @@ function inferFlowStages(plan, framework) {
     "permission"
   ]);
 
-  const stages = [
-    {
-      title: "Incoming Request",
-      file: framework === "express" ? "server.js" : "app.py",
-      description:
-        framework === "express"
-          ? "The Express server receives an HTTP request from the frontend."
-          : "The Flask application receives an HTTP request from the frontend."
-    }
-  ];
+  const stages = [{
+    title: "Incoming Request",
+    file: frameworkInfo.entryFile,
+    description: frameworkInfo.requestDescription
+  }];
 
   if (authEntry) {
     stages.push({
@@ -390,7 +473,7 @@ function inferFlowStages(plan, framework) {
       title: "Find the API Endpoint",
       file: routeEntry.path,
       description:
-        "The routing layer matches the request URL and HTTP method to the appropriate endpoint."
+        "The routing layer matches the request URL and method to the appropriate endpoint."
     });
   }
 
@@ -441,13 +524,9 @@ function inferFlowStages(plan, framework) {
 
   stages.push({
     title: "Return the Response",
-    file: routeEntry
-      ? routeEntry.path
-      : framework === "express"
-        ? "server.js"
-        : "app.py",
+    file: routeEntry ? routeEntry.path : frameworkInfo.responseFile,
     description:
-      "The backend returns a response, usually JSON with data or a message, to the frontend."
+      "The backend returns a response, usually data or a message, to the frontend."
   });
 
   return stages;
@@ -604,6 +683,7 @@ function renderCodingPrompt(idea, plan, framework) {
     promptBox.id = "codingPromptText";
     promptBox.readOnly = true;
     promptBox.rows = 20;
+
     promptBox.setAttribute(
       "aria-label",
       "Customized AI code generation prompt"
@@ -681,6 +761,7 @@ function renderCodingPrompt(idea, plan, framework) {
         status.textContent = "Prompt copied successfully!";
       } catch (error) {
         console.error("Prompt copy failed:", error);
+
         status.textContent =
           "Copy failed. Select the prompt and press Ctrl+C.";
       }
@@ -690,13 +771,13 @@ function renderCodingPrompt(idea, plan, framework) {
     section.append(heading, description, promptBox, actions);
   }
 
-const promptBox = section.querySelector("#codingPromptText");
-const status = section.querySelector("#codingPromptStatus");
+  const promptBox = section.querySelector("#codingPromptText");
+  const status = section.querySelector("#codingPromptStatus");
 
-if (!promptBox || !status) {
-  console.error("Coding prompt textarea or status element is missing.");
-  return;
-}
+  if (!promptBox || !status) {
+    console.error("Coding prompt textarea or status element is missing.");
+    return;
+  }
 
   // Build the tree from the actual generated folder plan.
   const folderTree = [
@@ -715,21 +796,49 @@ if (!promptBox || !status) {
   ].join("\n");
 
   const frameworkDetails = {
-    express: {
-      name: "JavaScript with Node.js and Express.js",
-      setup: "Use npm and the package.json scripts."
+    mern: {
+      name: "MERN stack: MongoDB, Express.js, React, and Node.js",
+      setup:
+        "Install a supported Node.js LTS release. Use npm to install dependencies. Configure MongoDB with an environment variable and keep the React client and Express server organized as separate parts of the project."
+    },
+
+    mean: {
+      name: "MEAN stack: MongoDB, Express.js, Angular, and Node.js",
+      setup:
+        "Install a supported Node.js LTS release and Angular CLI. Use npm for dependencies. Configure MongoDB with an environment variable and keep the Angular client and Express server clearly separated."
+    },
+
+    django: {
+      name: "Python with Django",
+      setup:
+        "Create and activate a Python virtual environment, install requirements.txt, configure environment variables, and run migrations before starting the Django development server."
+    },
+
+    lamp: {
+      name: "LAMP stack: Linux, Apache, MySQL, and PHP",
+      setup:
+        "Run on a Linux environment with Apache, PHP, and MySQL installed. Configure the Apache document root, create the MySQL database, and provide database credentials through environment variables or a secure server configuration."
     },
 
     flask: {
       name: "Python with Flask",
-      setup: "Use Python, a virtual environment, and requirements.txt."
+      setup:
+        "Create and activate a Python virtual environment, install requirements.txt, configure environment variables, and run the Flask application using its documented entry point."
+    },
+
+    spring: {
+      name: "Java with Spring Boot",
+      setup:
+        "Install a compatible JDK and use the project's Maven or Gradle build configuration. Configure the database and secrets outside source code, then run the Spring Boot application using the build tool."
     }
   };
 
   const selected = frameworkDetails[framework];
 
   if (!selected) {
-    throw new Error("Please select a supported backend framework.");
+    throw new Error(
+      "Please select one of the six supported technology stacks."
+    );
   }
 
   promptBox.value = `Act as a senior full-stack software engineer.
@@ -796,7 +905,7 @@ Generate code that is consistent across all files.`;
   }
 }
 
-/* Submit the website idea to the Flask API */
+/* Submit the website idea and selected stack to the backend API */
 ideaForm.addEventListener("submit", async (event) => {
   event.preventDefault();
 
@@ -858,7 +967,7 @@ ideaForm.addEventListener("submit", async (event) => {
     // Keep the existing backend flowchart.
     renderBackendFlow(plan, selectedFramework);
 
-    // NEW: Generate the customized prompt below the flowchart.
+    // Generate the customized prompt below the flowchart.
     renderCodingPrompt(idea, plan, selectedFramework);
 
     resultSection.hidden = false;
@@ -872,7 +981,7 @@ ideaForm.addEventListener("submit", async (event) => {
 
     errorMessage.textContent =
       error.message ||
-      "Unable to generate the folder structure. Check your Flask server and API settings.";
+      "Unable to generate the folder structure. Check your backend server and API settings.";
 
     errorMessage.hidden = false;
   } finally {
