@@ -640,11 +640,21 @@ def generate_folder_structure():
                 "response_mime_type": "application/json",
                 "response_json_schema": FOLDER_SCHEMA,
                 "temperature": 0.2,
-                "max_output_tokens": 5000
+                "max_output_tokens": 8000
             }
         )
 
-        if not response.text:
+        response_text = response.text
+
+        if not response_text:
+            finish_reason = (
+                response.candidates[0].finish_reason
+                if response.candidates else "No candidates"
+            )
+            app.logger.error(
+                "Gemini returned an empty response. Finish reason: %s",
+                finish_reason
+            )
             return jsonify({
                 "error": (
                     "Gemini returned an empty response. "
@@ -652,7 +662,14 @@ def generate_folder_structure():
                 )
             }), 502
 
-        plan = json.loads(response.text)
+        try:
+            plan = json.loads(response_text)
+        except json.JSONDecodeError:
+            app.logger.error(
+                "Gemini response was not valid JSON. Response preview: %r",
+                response_text[:1000]
+            )
+            raise
 
         if not isinstance(plan, dict):
             raise ValueError("Invalid response format.")
