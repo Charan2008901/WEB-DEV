@@ -9,7 +9,7 @@ from google import genai
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
 
-from db import db
+from db import get_db_connection
 
 
 # --------------------------------------------------
@@ -43,17 +43,13 @@ def google_login():
     token = data.get("token")
 
     if not token:
-        return jsonify({
-            "error": "Google token is required"
-        }), 400
+        return jsonify({"error": "Google token is required"}), 400
 
     if not GOOGLE_CLIENT_ID:
         app.logger.error("GOOGLE_CLIENT_ID is not configured.")
+        return jsonify({"error": "Google authentication is not configured."}), 503
 
-        return jsonify({
-            "error": "Google authentication is not configured."
-        }), 503
-
+    connection = None
     cursor = None
 
     try:
@@ -68,25 +64,20 @@ def google_login():
         email = user_info.get("email")
 
         if not email:
-            return jsonify({
-                "error": "Google account email is missing."
-            }), 400
+            return jsonify({"error": "Google account email is missing."}), 400
 
-        cursor = db.cursor(dictionary=True)
-
+        # Open a fresh connection for this request; don't reuse a stale global one.
+        connection = get_db_connection()
+        cursor = connection.cursor(dictionary=True)
         cursor.execute(
             "SELECT * FROM users WHERE google_id = %s",
             (google_id,)
         )
-
         user = cursor.fetchone()
 
         if user:
-            # Return a consistent premium flag to the frontend.
             user["is_premium"] = bool(user.get("is_premium", 0))
-
-            # Avoid returning a datetime object directly.
-            if "created_at" in user and user["created_at"] is not None:
+            if user.get("created_at") is not None:
                 user["created_at"] = str(user["created_at"])
 
             return jsonify({
@@ -101,8 +92,7 @@ def google_login():
             """,
             (name, email, google_id)
         )
-
-        db.commit()
+        connection.commit()
         user_id = cursor.lastrowid
 
         return jsonify({
@@ -117,20 +107,26 @@ def google_login():
         }), 201
 
     except Exception:
-        try:
-            db.rollback()
-        except Exception:
-            app.logger.exception("Database rollback failed")
+        if connection is not None:
+            try:
+                connection.rollback()
+            except Exception:
+                app.logger.exception("Database rollback failed")
 
         app.logger.exception("Google login failed")
-
-        return jsonify({
-            "error": "Google authentication failed"
-        }), 401
+        return jsonify({"error": "Google authentication failed"}), 401
 
     finally:
         if cursor is not None:
-            cursor.close()
+            try:
+                cursor.close()
+            except Exception:
+                app.logger.exception("Failed to close login cursor")
+        if connection is not None:
+            try:
+                connection.close()
+            except Exception:
+                app.logger.exception("Failed to close login database connection")
 
 
 # --------------------------------------------------
@@ -511,6 +507,7 @@ def generate_folder_structure():
                 "error": "Google authentication is not configured."
             }), 503
 
+        premium_connection = None
         premium_cursor = None
         try:
             verified_user = id_token.verify_oauth2_token(
@@ -525,7 +522,9 @@ def generate_folder_structure():
                     "error": "Invalid Google login. Please sign in again."
                 }), 401
 
-            premium_cursor = db.cursor(dictionary=True)
+            # Use a fresh connection for the Premium check as well.
+            premium_connection = get_db_connection()
+            premium_cursor = premium_connection.cursor(dictionary=True)
             premium_cursor.execute(
                 "SELECT is_premium FROM users WHERE google_id = %s",
                 (google_id,)
@@ -549,7 +548,15 @@ def generate_folder_structure():
             }), 401
         finally:
             if premium_cursor is not None:
-                premium_cursor.close()
+                try:
+                    premium_cursor.close()
+                except Exception:
+                    app.logger.exception("Failed to close Premium cursor")
+            if premium_connection is not None:
+                try:
+                    premium_connection.close()
+                except Exception:
+                    app.logger.exception("Failed to close Premium database connection")
 
     idea = data.get("idea")
     framework = data.get("framework")
