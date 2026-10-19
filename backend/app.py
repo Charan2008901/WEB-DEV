@@ -82,6 +82,9 @@ def google_login():
         user = cursor.fetchone()
 
         if user:
+            # Return a consistent premium flag to the frontend.
+            user["is_premium"] = bool(user.get("is_premium", 0))
+
             # Avoid returning a datetime object directly.
             if "created_at" in user and user["created_at"] is not None:
                 user["created_at"] = str(user["created_at"])
@@ -108,7 +111,8 @@ def google_login():
                 "id": user_id,
                 "name": name,
                 "email": email,
-                "google_id": google_id
+                "google_id": google_id,
+                "is_premium": False
             }
         }), 201
 
@@ -490,6 +494,62 @@ def generate_folder_structure():
         }), 400
 
     phase = int(phase)
+
+    # Phase 3 is premium-only. Verify the Google ID token on the server;
+    # never trust a premium flag sent by the browser.
+    if phase == 3:
+        token = data.get("token")
+
+        if not token:
+            return jsonify({
+                "error": "Please sign in to access Phase 3."
+            }), 401
+
+        if not GOOGLE_CLIENT_ID:
+            app.logger.error("GOOGLE_CLIENT_ID is not configured.")
+            return jsonify({
+                "error": "Google authentication is not configured."
+            }), 503
+
+        premium_cursor = None
+        try:
+            verified_user = id_token.verify_oauth2_token(
+                token,
+                google_requests.Request(),
+                GOOGLE_CLIENT_ID
+            )
+            google_id = verified_user.get("sub")
+
+            if not google_id:
+                return jsonify({
+                    "error": "Invalid Google login. Please sign in again."
+                }), 401
+
+            premium_cursor = db.cursor(dictionary=True)
+            premium_cursor.execute(
+                "SELECT is_premium FROM users WHERE google_id = %s",
+                (google_id,)
+            )
+            premium_user = premium_cursor.fetchone()
+
+            if not premium_user:
+                return jsonify({
+                    "error": "User account not found. Please sign in again."
+                }), 401
+
+            if not bool(premium_user.get("is_premium", 0)):
+                return jsonify({
+                    "error": "Phase 3 is available to Premium users only."
+                }), 403
+
+        except Exception:
+            app.logger.exception("Phase 3 premium authorization failed")
+            return jsonify({
+                "error": "Could not verify Premium access. Please sign in again."
+            }), 401
+        finally:
+            if premium_cursor is not None:
+                premium_cursor.close()
 
     idea = data.get("idea")
     framework = data.get("framework")

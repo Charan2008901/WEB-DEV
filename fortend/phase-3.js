@@ -217,6 +217,13 @@ async function generateBlueprint() {
     "Building your project blueprint. This can take a moment.";
 
   try {
+    // The backend verifies this Google ID token and checks premium access.
+    const googleToken = sessionStorage.getItem("google_id_token");
+
+    if (!googleToken) {
+      throw new Error("Please sign in with Google again to use Phase 3.");
+    }
+
     const response = await fetch(
       `${API_BASE_URL}/api/generate-folder-structure`,
       {
@@ -224,24 +231,29 @@ async function generateBlueprint() {
         headers: {
           "Content-Type": "application/json"
         },
-        
-body: JSON.stringify({
-  phase: 3,
-  idea: pendingIdea,
-  framework: pendingFramework,
-  database: selectedDatabase
-})
-
+        body: JSON.stringify({
+          phase: 3,
+          idea: pendingIdea,
+          framework: pendingFramework,
+          database: selectedDatabase,
+          token: googleToken
+        })
       }
     );
 
+    const data = await response.json().catch(() => ({}));
+
     if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error(data.error || "Please sign in with Google again.");
+      }
+      if (response.status === 403) {
+        throw new Error(data.error || "Phase 3 is for premium users. Your account is currently on the free plan.");
+      }
       throw new Error(
-        `The generator returned HTTP ${response.status}.`
+        data.error || `The generator returned HTTP ${response.status}.`
       );
     }
-
-    const data = await response.json();
 
     if (!data || !Array.isArray(data.folders)) {
       throw new Error(
