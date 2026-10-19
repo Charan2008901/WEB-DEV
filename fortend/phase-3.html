@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Project Builder — Phase 3</title>
+  <link rel="stylesheet" href="./phase-3.css">
+  <script src="./phase-3.js" defer></script>
+</head>
+<body>
+  <main class="page">
+    <header class="page-header">
+      <p class="eyebrow">WEB DEVELOPMENT LEARNING PLATFORM</p>
+      <h1>PHASE: 3 — AI PROJECT BUILDER</h1>
+      <p class="subtitle">Turn your idea into a project blueprint and a master prompt for your coding agent.</p>
+    </header>
+
+    <section class="panel intro-panel">
+      <div>
+        <span class="step-label">STEP 1</span>
+        <h2>Describe what you want to build</h2>
+        <p>Explain the app in your own words. Mention the users, features, and any special requirements you already know.</p>
+      </div>
+
+      <form id="ideaForm">
+        <label for="websiteIdea">Your project idea</label>
+        <textarea id="websiteIdea" maxlength="3000" required
+          placeholder="Example: Build a student project portal where students can sign up, upload projects, search projects by technology, and receive feedback from mentors."></textarea>
+
+        <div class="field-footer">
+          <span id="charCount">0 / 3000</span>
+          <span>Be specific for a better blueprint.</span>
+        </div>
+
+        <div class="field-group">
+          <label for="framework">Preferred stack</label>
+          <select id="framework">
+            <option value="mern">MERN — MongoDB, Express, React, Node.js</option>
+            <option value="mean">MEAN — MongoDB, Express, Angular, Node.js</option>
+            <option value="django">Django — Python</option>
+            <option value="lamp">LAMP — Linux, Apache, MySQL, PHP</option>
+            <option value="flask" selected>Flask — Python</option>
+            <option value="spring">Spring Boot — Java</option>
+          </select>
+          <p class="hint">Choose a stack you want to learn, or keep your preferred stack selected.</p>
+        </div>
+
+        <button class="primary-btn" type="submit">
+          Continue to database selection <span aria-hidden="true">→</span>
+        </button>
+      </form>
+    </section>
+
+    <section class="panel guide-panel">
+      <h2>How Phase 3 works</h2>
+      <div class="steps-grid">
+        <article class="step-card">
+          <span class="step-number">01</span>
+          <h3>Your idea</h3>
+          <p>Describe the product and its main features.</p>
+        </article>
+        <article class="step-card">
+          <span class="step-number">02</span>
+          <h3>Choose a database</h3>
+          <p>Compare practical options and select the one that fits your project.</p>
+        </article>
+        <article class="step-card">
+          <span class="step-number">03</span>
+          <h3>Get your blueprint</h3>
+          <p>Generate a folder structure and a detailed coding-agent prompt.</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="resultSection" class="panel result-panel hidden" aria-live="polite">
+      <div class="result-heading">
+        <div>
+          <span class="step-label">GENERATED BLUEPRINT</span>
+          <h2 id="resultTitle">Your project blueprint</h2>
+          <p id="projectSummary"></p>
+        </div>
+        <span id="stackBadge" class="stack-badge"></span>
+      </div>
+
+      <div class="result-meta">
+        <div>
+          <span>Selected database</span>
+          <strong id="databaseResult"></strong>
+        </div>
+        <div>
+          <span>Project root</span>
+          <strong id="rootName"></strong>
+        </div>
+      </div>
+
+      <div class="output-grid">
+        <section class="output-card">
+          <div class="output-card-header">
+            <div>
+              <h3>Project folder structure</h3>
+              <p>Suggested layout for your project</p>
+            </div>
+            <button id="copyTreeBtn" class="secondary-btn" type="button">Copy structure</button>
+          </div>
+          <pre id="generatedTree" class="tree-output"></pre>
+        </section>
+
+        <section class="output-card">
+          <div class="output-card-header">
+            <div>
+              <h3>Master prompt</h3>
+              <p>Copy into your coding agent</p>
+            </div>
+            <button id="copyPromptBtn" class="secondary-btn" type="button">Copy prompt</button>
+          </div>
+          <textarea id="codingPrompt" class="prompt-output" readonly spellcheck="false"></textarea>
+        </section>
+      </div>
+
+      <p id="statusMessage" class="status-message" role="status"></p>
+      <button id="startOverBtn" class="text-btn" type="button">← Build another project</button>
+    </section>
+
+    <footer>
+      <p>Phase 3 · Project planning assistant · Review generated files and security choices before deploying.</p>
+    </footer>
+  </main>
+
+  <div id="databaseModal" class="modal-backdrop hidden"
+       role="dialog" aria-modal="true" aria-labelledby="databaseTitle">
+    <section class="database-dialog">
+      <button id="closeModalBtn" class="close-btn" type="button"
+              aria-label="Close database selection">×</button>
+
+      <span class="step-label">STEP 2</span>
+      <h2 id="databaseTitle">Choose the database for your project</h2>
+      <p id="databaseIntro" class="modal-intro">
+        Compare the options below. The suggested option is a starting point, not a rule.
+      </p>
+
+      <div id="databaseCards" class="database-grid"></div>
+
+      <div class="modal-footer">
+        <p id="databaseNote">You can change this selection later.</p>
+        <button id="generateBtn" class="primary-btn" type="button">
+          Generate project blueprint <span aria-hidden="true">→</span>
+        </button>
+      </div>
+    </section>
+  </div>
+</body>
+</html>
