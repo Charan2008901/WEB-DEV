@@ -662,14 +662,23 @@ def generate_folder_structure():
                 )
             }), 502
 
-        try:
-            plan = json.loads(response_text)
-        except json.JSONDecodeError:
-            app.logger.error(
-                "Gemini response was not valid JSON. Response preview: %r",
-                response_text[:1000]
-            )
-            raise
+        # The Gemini SDK parses responses that use response_json_schema.
+        # Prefer that parsed object; fall back to decoding the response text.
+        plan = getattr(response, "parsed", None)
+        if plan is None:
+            try:
+                plan = json.loads(response_text)
+            except json.JSONDecodeError:
+                finish_reason = (
+                    response.candidates[0].finish_reason
+                    if response.candidates else "No candidates"
+                )
+                app.logger.error(
+                    "Gemini returned invalid JSON. Finish reason: %s. Response preview: %r",
+                    finish_reason,
+                    response_text[:1500]
+                )
+                raise
 
         if not isinstance(plan, dict):
             raise ValueError("Invalid response format.")
