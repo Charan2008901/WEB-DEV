@@ -15,6 +15,7 @@
             align-items: center;
             gap: 15px;
             padding: 12px 20px;
+            flex-wrap: wrap;
         }
 
         #logout-button {
@@ -28,8 +29,49 @@
             text-align: center;
             padding: 30px;
         }
+
+        .subscription-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 7px 14px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .subscription-label.plan-premium {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .subscription-label.plan-free {
+            background: #e5e7eb;
+            color: #374151;
+        }
+
+        .phase-link {
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            text-decoration: none;
+        }
+
+        .phase-note {
+            font-size: 13px;
+            text-align: center;
+            max-width: 180px;
+        }
+
+        #phase-3-button:disabled {
+            cursor: not-allowed;
+            opacity: 0.65;
+        }
     </style>
-    <meta name="google-site-verification" content="FBUoyj4_IKidOOXCP2x1PkJYMO4TX-EL75YrzxAZvPo" />
+
+    <meta name="google-site-verification"
+          content="FBUoyj4_IKidOOXCP2x1PkJYMO4TX-EL75YrzxAZvPo">
 </head>
 
 <body>
@@ -40,7 +82,15 @@
 
         <div class="account-bar">
             <span id="user-name"></span>
-            <button id="logout-button" type="button">Log out</button>
+
+            <span id="subscription-label"
+                  class="subscription-label plan-free">
+                Free Plan
+            </span>
+
+            <button id="logout-button" type="button">
+                Log out
+            </button>
         </div>
 
         <h3 id="main-title">Learn HOW TO BUILD Simple Websites...</h3>
@@ -49,7 +99,6 @@
             <h2>Learning Phases</h2>
 
             <div class="roadmap-container">
-
                 <div class="roadmap-item">
                     <h3>Phase 1: How to Make Basic Webpage Using AI.</h3>
                     <p>In This Phase, You Will Learn How to Use AI to Create Basic Web Pages.</p>
@@ -62,14 +111,13 @@
 
                 <div class="roadmap-item">
                     <h3>Phase 3: How to connect servers and databases.</h3>
-                    <p> Learn how to connect and manage databases.</p>
+                    <p>Learn how to connect and manage databases.</p>
                 </div>
 
                 <div class="roadmap-item">
-                    <h3>Phase 4: How to integrate AI & LLM into your website and combone them.</h3>
-                    <p>Learn how to integrate AI and LLM technologies to your web application.</p>
+                    <h3>Phase 4: How to integrate AI &amp; LLM into your website and combine them.</h3>
+                    <p>Learn how to integrate AI and LLM technologies into your web application.</p>
                 </div>
-
             </div>
         </section>
 
@@ -84,9 +132,17 @@
                 <button class="phase-button" type="button">Phase 2</button>
             </a>
 
-            <a href="phase-3.html">
-                <button class="phase-button" type="button">Phase 3</button>
-            </a>
+            <div class="phase-link" id="phase-3-container">
+                <a id="phase-3-link" href="phase-3.html">
+                    <button id="phase-3-button"
+                            class="phase-button"
+                            type="button">
+                        Phase 3
+                    </button>
+                </a>
+
+                <span id="phase-3-note" class="phase-note" hidden></span>
+            </div>
 
             <button class="phase-button" type="button" disabled>
                 Phase 4 (Coming Soon)
@@ -104,6 +160,58 @@
     <script>
         const BACKEND_URL =
             "https://web-dev-backend-g976.onrender.com";
+
+        function userIsPremium(user) {
+            return user.is_premium === true ||
+                   user.is_premium === 1 ||
+                   user.is_premium === "1" ||
+                   user.subscription_status === "premium" ||
+                   user.plan === "premium";
+        }
+
+        function showPhaseAccess(isPremium) {
+            const label =
+                document.getElementById("subscription-label");
+
+            const link =
+                document.getElementById("phase-3-link");
+
+            const button =
+                document.getElementById("phase-3-button");
+
+            const note =
+                document.getElementById("phase-3-note");
+
+            if (isPremium) {
+                label.textContent = "👑 Premium";
+                label.classList.remove("plan-free");
+                label.classList.add("plan-premium");
+
+                button.disabled = false;
+                button.textContent = "Phase 3";
+                link.href = "phase-3.html";
+                link.setAttribute("aria-label", "Open Phase 3");
+
+                note.hidden = true;
+            } else {
+                label.textContent = "Free Plan";
+                label.classList.remove("plan-premium");
+                label.classList.add("plan-free");
+
+                button.disabled = true;
+                button.textContent = "Phase 3 🔒";
+
+                // Prevent normal navigation for free users.
+                link.removeAttribute("href");
+                link.setAttribute(
+                    "aria-label",
+                    "Phase 3 requires Premium"
+                );
+
+                note.textContent = "Premium access required";
+                note.hidden = false;
+            }
+        }
 
         async function checkLogin() {
             const token =
@@ -132,8 +240,12 @@
                     throw new Error("Login verification failed");
                 }
 
+                const user = data.user;
+
                 document.getElementById("user-name").textContent =
-                    "Welcome, " + (data.user.name || "Learner");
+                    "Welcome, " + (user.name || "Learner");
+
+                showPhaseAccess(userIsPremium(user));
 
                 document.getElementById("auth-status").hidden = true;
                 document.getElementById("website-content").hidden = false;
