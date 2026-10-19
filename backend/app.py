@@ -620,7 +620,8 @@ def generate_folder_structure():
         idea,
         "\n\nFINAL REMINDER:\n",
         f"The required root_name is exactly {root_name!r}. ",
-        "Return a complete and useful structure for the selected phase."
+        "Return a concise but complete structure with no more than 35 entries total. "
+        "Return valid JSON only, with no markdown or commentary."
     ])
 
     full_prompt = "".join(prompt_parts)
@@ -640,7 +641,7 @@ def generate_folder_structure():
                 "response_mime_type": "application/json",
                 "response_json_schema": FOLDER_SCHEMA,
                 "temperature": 0.2,
-                "max_output_tokens": 8000
+                "max_output_tokens": 4000
             }
         )
 
@@ -674,7 +675,8 @@ def generate_folder_structure():
                     if response.candidates else "No candidates"
                 )
                 app.logger.error(
-                    "Gemini returned invalid JSON. Finish reason: %s. Response preview: %r",
+                    "Gemini returned invalid JSON. Model: %s. Finish reason: %s. Response preview: %r",
+                    model_name,
                     finish_reason,
                     response_text[:1500]
                 )
@@ -686,7 +688,7 @@ def generate_folder_structure():
         if not isinstance(plan.get("folders"), list):
             raise ValueError("The folders list is missing.")
 
-        if not 1 <= len(plan["folders"]) <= 100:
+        if not 1 <= len(plan["folders"]) <= 60:
             raise ValueError("Invalid number of folder entries.")
 
         # --------------------------------------------------
