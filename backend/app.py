@@ -11,7 +11,8 @@ from google.auth.transport import requests as google_requests
 
 from db import get_db_connection
 
-
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 # --------------------------------------------------
 # CONFIGURATION
 # --------------------------------------------------
@@ -19,8 +20,23 @@ from db import get_db_connection
 load_dotenv()
 
 app = Flask(__name__)
-CORS(app)
+CORS(
+    app,
+    resources={
+        r"/api/*": {
+            "origins": [
+                "https://web-dev-zikd.onrender.com"
+            ]
+        }
+    }
+)
 
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=["100 per hour"],
+    storage_uri="memory://",
+)
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 
 
@@ -471,6 +487,7 @@ STRICT REQUIREMENTS:
 # --------------------------------------------------
 
 @app.route("/api/generate-folder-structure", methods=["POST"])
+@limiter.limit("5 per minute")
 def generate_folder_structure():
 
     # Read request JSON.

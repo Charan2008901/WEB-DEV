@@ -7,3 +7,4 @@ google-auth
 requests
 gunicorn
 google-genai
+Flask-Limiter
