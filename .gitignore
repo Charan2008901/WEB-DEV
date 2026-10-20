@@ -1,4 +1,21 @@
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
 backend/.env
-backend/__pycache__/
-*.pyc
+backend/.env.*
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+
+# Node.js
 node_modules/
+
+# Private keys and certificates
+*.pem
+*.key
