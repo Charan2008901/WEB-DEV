@@ -2,7 +2,7 @@
 import os
 import json
 
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, g
 from flask_cors import CORS
 from dotenv import load_dotenv
 from google import genai
@@ -13,6 +13,8 @@ from db import get_db_connection
 
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from redis import Redis
+from redis.exceptions import RedisError
 # --------------------------------------------------
 # CONFIGURATION
 # --------------------------------------------------
@@ -31,13 +33,107 @@ CORS(
     }
 )
 
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
+REDIS_URL = os.getenv("REDIS_URL")
+
+# Redis is required in production for shared rate-limit counters and quotas.
+# The in-memory fallback is intended only for local development.
 limiter = Limiter(
-    get_remote_address,
+    key_func=get_remote_address,
     app=app,
     default_limits=["100 per hour"],
-    storage_uri="memory://",
+    storage_uri=REDIS_URL or "memory://",
 )
-GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
+
+quota_redis = (
+    Redis.from_url(
+        REDIS_URL,
+        decode_responses=True,
+        socket_connect_timeout=2,
+        socket_timeout=2,
+    )
+    if REDIS_URL
+    else None
+)
+
+if not REDIS_URL:
+    app.logger.warning(
+        "REDIS_URL is missing; rate limits use local memory and the daily "
+        "generation quota will fail closed for authenticated requests."
+    )
+
+
+def get_request_google_id():
+    """Return a verified Google subject from the request token, if present."""
+    if getattr(g, "_google_id_checked", False):
+        return getattr(g, "_google_id", None)
+
+    g._google_id_checked = True
+    g._google_id = None
+
+    body = request.get_json(silent=True)
+    token = body.get("token") if isinstance(body, dict) else None
+    if not token or not GOOGLE_CLIENT_ID:
+        return None
+
+    try:
+        user_info = id_token.verify_oauth2_token(
+            token,
+            google_requests.Request(),
+            GOOGLE_CLIENT_ID,
+        )
+        g._google_id = user_info.get("sub")
+    except Exception:
+        # Invalid tokens receive the anonymous IP rate limit. Routes that
+        # require authentication still perform their own authorization checks.
+        g._google_id = None
+
+    return g._google_id
+
+
+def generation_rate_limit_key():
+    """Rate-limit verified accounts by Google subject, otherwise by IP."""
+    google_id = get_request_google_id()
+    if google_id:
+        return f"google-account:{google_id}"
+    return f"anonymous-ip:{get_remote_address()}"
+
+
+def generation_rate_limit():
+    """Return the per-minute limit appropriate for this request."""
+    return "5 per minute" if get_request_google_id() else "3 per minute"
+
+
+def consume_daily_generation_quota(google_id):
+    """Atomically allow at most 20 generations per Google account per 24h."""
+    if quota_redis is None:
+        raise RedisError("REDIS_URL is not configured")
+
+    key = f"generation:daily:{google_id}"
+    # Do not increase the counter after the limit has been reached.
+    count = quota_redis.eval(
+        """
+        local current = tonumber(redis.call('GET', KEYS[1]) or '0')
+        if current >= tonumber(ARGV[1]) then
+            return 0
+        end
+        local count = redis.call('INCR', KEYS[1])
+        if count == 1 then
+            redis.call('EXPIRE', KEYS[1], ARGV[2])
+        end
+        return count
+        """,
+        1,
+        key,
+        20,
+        86400,
+    )
+    return int(count)
+
+
+@app.errorhandler(429)
+def handle_rate_limit(error):
+    return jsonify({"error": "Too many requests. Please wait and try again."}), 429
 
 
 # --------------------------------------------------
@@ -487,7 +583,11 @@ STRICT REQUIREMENTS:
 # --------------------------------------------------
 
 @app.route("/api/generate-folder-structure", methods=["POST"])
-@limiter.limit("5 per minute")
+@limiter.limit(
+    generation_rate_limit,
+    key_func=generation_rate_limit_key,
+    override_defaults=True,
+)
 def generate_folder_structure():
 
     # Read request JSON.
@@ -648,6 +748,26 @@ def generate_folder_structure():
 
         database_key = database
         selected_database = SUPPORTED_DATABASES[database]
+
+    # Apply the daily quota to any generation request with a verified Google
+    # account. Anonymous Phase 2 users are still protected by the per-IP limit.
+    authenticated_google_id = get_request_google_id()
+    if authenticated_google_id:
+        try:
+            daily_count = consume_daily_generation_quota(authenticated_google_id)
+        except RedisError:
+            app.logger.exception("Daily generation quota service unavailable")
+            return jsonify({
+                "error": "Generation is temporarily unavailable. Please try again later."
+            }), 503
+
+        if daily_count == 0:
+            return jsonify({
+                "error": (
+                    "Daily generation limit reached. "
+                    "You can generate up to 20 structures per 24 hours."
+                )
+            }), 429
 
     # --------------------------------------------------
     # GEMINI CONFIGURATION
