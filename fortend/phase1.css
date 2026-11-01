@@ -1,260 +1,246 @@
 /* ======================================================================
-   TOKENS
-   Abyss Navy #0A0E1A   -> page background
-   Panel Slate #121829  -> card surface (base)
-   Panel Light #1B2440  -> card surface (highlight edge)
-   Signal Cyan #4FD6F0  -> primary accent
-   Beacon Amber #FFB454 -> secondary accent
-   Paper #EDF1FA        -> primary text
-   Mist #9AA6C4         -> secondary text
+   COLOR SYSTEM
+   Main background  antiquewhite  #FAEBD7
+   Main text        #263449
+   Headings         brown         #713B35
+   Primary / buttons blue         #2457D6
+   Content panels   white         #FFFFFF
+   Panel borders    beige         #F5F5DC (deeper beige for edges)
+   Code / folder bg light         #F7F3E8
    ====================================================================== */
 
 :root {
-    --bg: #0A0E1A;
-    --panel: #121829;
-    --panel-light: #1B2440;
-    --panel-deep: #0C1120;
-    --line: rgba(255, 255, 255, 0.07);
-    --line-soft: rgba(255, 255, 255, 0.04);
-    --cyan: #4FD6F0;
-    --amber: #FFB454;
-    --paper: #EDF1FA;
-    --mist: #9AA6C4;
-    --mist-dim: #6C7793;
+    --bg: #FAEBD7;
+    --text: #263449;
+    --text-soft: #4A5A72;
+    --heading: #713B35;
+    --blue: #2457D6;
+    --blue-dark: #1A41A8;
+    --panel: #FFFFFF;
+    --beige: #F5F5DC;
+    --beige-deep: #E6DDBE;
+    --code-bg: #F7F3E8;
 
     --font-display: "Space Grotesk", "Segoe UI", sans-serif;
     --font-body: "Inter", "Segoe UI", sans-serif;
 }
 
-* {
-    box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
-html {
-    scroll-behavior: smooth;
-}
+html { scroll-behavior: smooth; }
 
 body {
     margin: 0;
     font-family: var(--font-body);
     background-color: var(--bg);
-    color: var(--paper);
-    background-image:
-        radial-gradient(circle at 15% 8%, rgba(79, 214, 240, 0.08), transparent 42%),
-        radial-gradient(circle at 85% 28%, rgba(255, 180, 84, 0.06), transparent 40%),
-        repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.025) 0px, rgba(255, 255, 255, 0.025) 1px, transparent 1px, transparent 64px),
-        repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.025) 0px, rgba(255, 255, 255, 0.025) 1px, transparent 1px, transparent 64px);
-    background-attachment: fixed;
-    padding-bottom: 60px;
+    color: var(--text);
+    padding-bottom: 70px;
 }
 
 /* ======================================================================
-   SHARED PANEL "EMBOSS" TREATMENT
+   SHARED 3D PANEL
+   White slab with beige border and a stacked "thickness" edge below it
    ====================================================================== */
 
 #phase1-intro,
 .main-section,
 .stack-introduction {
     position: relative;
-    max-width: 860px;
-    background: linear-gradient(160deg, var(--panel-light) 0%, var(--panel) 55%, var(--panel-deep) 100%);
-    border: 1px solid var(--line);
+    max-width: 880px;
+    background: var(--panel);
+    border: 2px solid var(--beige-deep);
     box-shadow:
-        0 22px 46px rgba(0, 0, 0, 0.55),
-        0 2px 0 rgba(255, 255, 255, 0.04) inset,
-        0 -18px 30px rgba(0, 0, 0, 0.25) inset;
+        0 6px 0 var(--beige-deep),
+        0 10px 0 rgba(113, 59, 53, 0.12),
+        0 26px 40px rgba(113, 59, 53, 0.22);
 }
 
 /* ======================================================================
-   INTRODUCTION PANEL
+   INTRODUCTION
    ====================================================================== */
 
 #phase1-intro {
     width: 88%;
-    margin: 80px auto 56px;
-    padding: 48px 52px;
-    border-radius: 26px;
+    margin: 80px auto 60px;
+    padding: 52px 56px;
+    border-radius: 24px;
 }
 
 #phase1-heading {
     font-family: var(--font-display);
-    font-size: 34px;
+    font-size: 40px;
     font-weight: 700;
     letter-spacing: -0.01em;
-    color: var(--paper);
+    color: var(--heading);
     margin: 0 0 6px;
-    padding-bottom: 20px;
-    border-bottom: 1px solid var(--line);
+    padding-bottom: 22px;
+    border-bottom: 3px solid var(--beige);
 }
 
-/* content element, but left empty in the markup -- collapse the gap it
-   would otherwise leave rather than showing a blank heading */
-#intro-heading {
-    display: none;
-}
+/* empty in the markup - hidden so it leaves no blank gap */
+#intro-heading { display: none; }
 
 #intro-text {
     font-family: var(--font-body);
-    font-size: 18px;
+    font-size: 19px;
     font-weight: 400;
-    line-height: 1.8;
-    color: var(--mist);
-    margin-top: 26px;
+    line-height: 1.85;
+    color: var(--text);
+    margin-top: 28px;
     max-width: 68ch;
 }
 
 #important-heading {
     font-family: var(--font-display);
-    font-size: 21px;
-    font-weight: 600;
-    color: var(--amber);
-    margin: 40px 0 14px;
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--heading);
+    margin: 42px 0 14px;
 }
 
 #important-text {
-    font-size: 17px;
-    color: var(--mist);
+    font-size: 18px;
+    color: var(--text);
     line-height: 1.8;
-    background: rgba(0, 0, 0, 0.18);
-    border: 1px solid var(--line);
-    border-left: 3px solid var(--amber);
-    border-radius: 4px;
-    padding: 18px 24px;
+    background: var(--code-bg);
+    border: 2px solid var(--beige-deep);
+    border-left: 6px solid var(--blue);
+    border-radius: 8px;
+    padding: 20px 28px;
+    box-shadow: inset 0 3px 6px rgba(113, 59, 53, 0.08);
 }
 
 #important-text p {
     margin: 0 0 10px;
-    color: var(--paper);
-    font-weight: 500;
+    font-weight: 600;
 }
 
-#important-text ul {
-    margin: 0;
-    padding-left: 22px;
-}
-
-#important-text li {
-    margin: 6px 0;
-}
+#important-text ul { margin: 0; padding-left: 22px; }
+#important-text li { margin: 6px 0; }
+#important-text li::marker { color: var(--blue); }
 
 /* ======================================================================
-   PHASE DIVIDER
+   PHASE DIVIDER (extruded 3D text)
    ====================================================================== */
 
 #middle {
-    position: relative;
     text-align: center;
     font-family: var(--font-display);
-    font-size: 58px;
+    font-size: 72px;
     font-weight: 700;
     letter-spacing: 0.04em;
-    color: var(--paper);
-    margin: 90px 0 44px;
+    color: var(--heading);
+    margin: 90px 0 50px;
     text-shadow:
-        0 1px 0 rgba(255, 255, 255, 0.12),
-        0 2px 0 rgba(0, 0, 0, 0.3),
-        0 10px 24px rgba(0, 0, 0, 0.6),
-        0 0 46px rgba(79, 214, 240, 0.18);
+        1px 1px 0 #5E2F2A,
+        2px 2px 0 #5E2F2A,
+        3px 3px 0 #5E2F2A,
+        4px 4px 0 #5E2F2A,
+        5px 5px 0 #4D2622,
+        6px 6px 0 #4D2622,
+        7px 7px 14px rgba(0, 0, 0, 0.3);
 }
 
 #middle::after {
     content: "";
     display: block;
-    width: 220px;
-    height: 4px;
-    border-radius: 2px;
-    background: linear-gradient(90deg, transparent, var(--cyan), var(--amber), transparent);
-    margin: 28px auto 0;
-    box-shadow: 0 0 18px rgba(79, 214, 240, 0.5);
+    width: 240px;
+    height: 8px;
+    border-radius: 4px;
+    background: var(--blue);
+    margin: 34px auto 0;
+    box-shadow: 0 4px 0 var(--blue-dark), 0 10px 14px rgba(36, 87, 214, 0.3);
 }
 
 /* ======================================================================
-   STEP / NOTE PANELS
+   STEP PANELS
    ====================================================================== */
 
 .main-section {
     width: 88%;
-    margin: 36px auto;
-    padding: 40px 48px;
+    margin: 46px auto;
+    padding: 44px 52px;
     border-radius: 18px;
 }
 
+/* "Step: N" rendered as a raised blue button-style badge */
 .main-section h2 {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
+    display: block;
+    width: fit-content;
     font-family: var(--font-display);
-    font-size: 19px;
+    font-size: 20px;
     font-weight: 600;
-    color: var(--panel-deep);
-    background: linear-gradient(160deg, var(--cyan), #2fb8d6);
-    padding: 8px 22px;
+    color: #FFFFFF;
+    background: linear-gradient(180deg, #3A6AE6, var(--blue));
+    padding: 10px 28px;
     border-radius: 999px;
-    box-shadow:
-        0 8px 16px rgba(79, 214, 240, 0.25),
-        0 1px 0 rgba(255, 255, 255, 0.4) inset;
-    margin: 0 auto 22px;
+    box-shadow: 0 5px 0 var(--blue-dark), 0 12px 18px rgba(36, 87, 214, 0.3);
+    margin: 0 auto 30px;
 }
 
 .step-title {
     font-family: var(--font-display);
-    font-size: 27px;
-    font-weight: 600;
+    font-size: 32px;
+    font-weight: 700;
     text-align: center;
-    color: var(--paper);
-    margin: 0 0 26px;
+    color: var(--heading);
+    margin: 0 0 28px;
+    line-height: 1.3;
 }
 
 .main-section h5 {
     font-family: var(--font-body);
-    font-size: 17px;
+    font-size: 18px;
     font-weight: 400;
     text-align: left;
     line-height: 1.75;
-    color: var(--mist);
-    max-width: 62ch;
+    color: var(--text);
+    max-width: 64ch;
     margin: 14px auto;
-    padding-left: 18px;
-    border-left: 2px solid var(--line);
+    padding: 4px 0 4px 20px;
+    border-left: 4px solid var(--beige-deep);
 }
 
 /* ======================================================================
-   TECHNOLOGY STACKS HEADING
+   STACKS HEADING + INTRO
    ====================================================================== */
 
 #stack-heading {
     text-align: center;
     font-family: var(--font-display);
-    font-size: 40px;
+    font-size: 48px;
     font-weight: 700;
-    letter-spacing: 0.01em;
-    color: var(--paper);
-    margin: 100px 0 34px;
-    text-shadow: 0 8px 20px rgba(0, 0, 0, 0.55);
+    color: var(--heading);
+    margin: 100px 20px 40px;
+    line-height: 1.2;
+    text-shadow:
+        1px 1px 0 #5E2F2A,
+        2px 2px 0 #5E2F2A,
+        3px 3px 0 #5E2F2A,
+        4px 4px 10px rgba(0, 0, 0, 0.28);
 }
 
 #stack-heading::after {
     content: "";
     display: block;
-    width: 220px;
-    height: 4px;
-    border-radius: 2px;
-    background: linear-gradient(90deg, transparent, var(--amber), var(--cyan), transparent);
-    margin: 28px auto 0;
-    box-shadow: 0 0 18px rgba(255, 180, 84, 0.45);
+    width: 240px;
+    height: 8px;
+    border-radius: 4px;
+    background: var(--blue);
+    margin: 32px auto 0;
+    box-shadow: 0 4px 0 var(--blue-dark), 0 10px 14px rgba(36, 87, 214, 0.3);
 }
 
 .stack-introduction {
     width: 88%;
-    margin: 0 auto 50px;
-    padding: 34px 48px;
+    margin: 0 auto 56px;
+    padding: 36px 52px;
     border-radius: 18px;
 }
 
 .stack-introduction p {
-    font-size: 18px;
-    font-weight: 400;
-    color: var(--mist);
+    font-size: 19px;
+    color: var(--text);
     text-align: center;
     line-height: 1.8;
     max-width: 62ch;
@@ -262,203 +248,141 @@ body {
 }
 
 /* ======================================================================
-   STACK MODULE CARDS
-   Each card gets a per-module accent colour via nth-of-type, drawn as a
-   top signal strip plus two schematic corner marks.
+   STACK CARDS
    ====================================================================== */
 
 .stack-card {
-    --card-accent: var(--cyan);
-    padding: 44px 48px 40px;
-    border-radius: 10px;
-    overflow: visible;
-    transition: transform 0.35s ease, box-shadow 0.35s ease;
-    transform-style: preserve-3d;
+    padding: 52px 52px 44px;
+    border-radius: 14px;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
+/* blue top tab */
 .stack-card::before {
-    /* top signal strip */
     content: "";
     position: absolute;
-    top: 0;
-    left: 32px;
-    right: 32px;
-    height: 3px;
-    background: var(--card-accent);
-    box-shadow: 0 0 14px var(--card-accent);
-    border-radius: 0 0 3px 3px;
-}
-
-.stack-card::after {
-    content: "";
-    position: absolute;
-    inset: 14px;
-    border-top: 2px solid var(--card-accent);
-    border-left: 2px solid var(--card-accent);
-    width: 22px;
-    height: 22px;
-    opacity: 0.55;
-    pointer-events: none;
+    top: -2px;
+    left: 40px;
+    width: 120px;
+    height: 10px;
+    background: var(--blue);
+    border-radius: 0 0 8px 8px;
+    box-shadow: 0 3px 0 var(--blue-dark);
 }
 
 .stack-card:hover {
-    transform: perspective(1000px) rotateX(1.5deg) translateY(-6px);
+    transform: translateY(-6px);
     box-shadow:
-        0 32px 60px rgba(0, 0, 0, 0.6),
-        0 2px 0 rgba(255, 255, 255, 0.04) inset,
-        0 -18px 30px rgba(0, 0, 0, 0.25) inset;
+        0 6px 0 var(--beige-deep),
+        0 10px 0 rgba(113, 59, 53, 0.12),
+        0 36px 54px rgba(113, 59, 53, 0.28);
 }
-
-.stack-card:nth-of-type(1) { --card-accent: #4FD6F0; } /* MERN */
-.stack-card:nth-of-type(2) { --card-accent: #FFB454; } /* MEAN */
-.stack-card:nth-of-type(3) { --card-accent: #7C9CFF; } /* Django */
-.stack-card:nth-of-type(4) { --card-accent: #3ED6A5; } /* LAMP */
-.stack-card:nth-of-type(5) { --card-accent: #FF8B6B; } /* Flask */
-.stack-card:nth-of-type(6) { --card-accent: #D6A4FF; } /* Spring Boot */
 
 .stack-card h2 {
     display: block;
+    width: auto;
     background: none;
     box-shadow: none;
     border-radius: 0;
     padding: 0;
-    color: var(--card-accent);
-    font-size: 25px;
+    color: var(--heading);
+    font-size: 32px;
     text-align: left;
-    margin: 6px 0 6px;
+    margin: 6px 0 8px;
 }
 
 .stack-description {
-    font-size: 17px;
-    font-weight: 400;
+    font-size: 18px;
     font-style: italic;
-    color: var(--mist-dim);
+    color: var(--text-soft);
     text-align: left;
     line-height: 1.6;
     margin: 0 0 30px;
-    padding-bottom: 22px;
-    border-bottom: 1px solid var(--line);
+    padding-bottom: 24px;
+    border-bottom: 3px solid var(--beige);
 }
 
 .stack-card h3 {
     font-family: var(--font-display);
-    font-size: 14px;
-    font-weight: 600;
-    letter-spacing: 0.06em;
+    font-size: 19px;
+    font-weight: 700;
     text-align: left;
-    color: var(--card-accent);
-    margin: 26px 0 8px;
+    color: var(--heading);
+    margin: 28px 0 10px;
 }
 
-.stack-card p {
+/* values (Frontend / Backend / Database / ...) sit in light code-style chips */
+.stack-card h3 + p {
+    display: inline-block;
     font-size: 17px;
-    color: var(--paper);
+    font-weight: 500;
+    color: var(--text);
     text-align: left;
-    line-height: 1.7;
+    line-height: 1.6;
+    background: var(--code-bg);
+    border: 2px solid var(--beige-deep);
+    border-radius: 8px;
+    padding: 8px 16px;
     margin: 0;
+    box-shadow: 0 3px 0 var(--beige-deep);
 }
 
-/* the closing "why choose this" paragraph reads better in the muted tone */
+/* the closing "when should you choose" paragraph is prose, not a chip */
 .stack-card h3:last-of-type + p {
-    color: var(--mist);
+    display: block;
+    background: none;
+    border: 0;
+    border-left: 4px solid var(--blue);
+    border-radius: 0;
+    box-shadow: none;
+    padding: 2px 0 2px 18px;
+    font-weight: 400;
+    font-size: 18px;
+    line-height: 1.75;
 }
 
-/* STACK USES LIST */
 .stack-card ul {
     width: auto;
     max-width: none;
     margin: 4px 0 0;
-    padding-left: 20px;
-    color: var(--paper);
-    font-size: 17px;
+    padding: 14px 20px 14px 40px;
+    background: var(--code-bg);
+    border: 2px solid var(--beige-deep);
+    border-radius: 10px;
+    color: var(--text);
+    font-size: 18px;
     line-height: 2;
+    box-shadow: inset 0 3px 6px rgba(113, 59, 53, 0.07);
 }
 
-.stack-card li {
-    padding-left: 4px;
-}
-
-.stack-card li::marker {
-    color: var(--card-accent);
-}
+.stack-card li::marker { color: var(--blue); }
 
 /* ======================================================================
-   MOBILE RESPONSIVENESS
+   MOBILE
    ====================================================================== */
 
 @media (max-width: 600px) {
+    #phase1-intro { width: 92%; padding: 30px 24px; border-radius: 18px; }
+    #phase1-heading { font-size: 28px; }
+    #intro-text { font-size: 16px; }
+    #important-heading { font-size: 21px; }
+    #important-text { font-size: 16px; padding: 16px 18px; }
 
-    #phase1-intro {
-        width: 92%;
-        padding: 30px 26px;
-        border-radius: 20px;
-    }
+    #middle { font-size: 44px; margin: 64px 0 36px; }
+    #stack-heading { font-size: 30px; margin-top: 70px; }
 
-    #phase1-heading {
-        font-size: 26px;
-    }
+    .main-section { width: 92%; padding: 30px 22px; }
+    .main-section h2 { font-size: 18px; padding: 8px 22px; }
+    .step-title { font-size: 24px; }
+    .main-section h5 { font-size: 16px; }
 
-    #intro-text {
-        font-size: 16px;
-    }
+    .stack-introduction { width: 92%; padding: 26px 22px; }
+    .stack-introduction p, .stack-description { font-size: 16px; }
 
-    #important-text {
-        padding: 16px 18px;
-    }
-
-    #middle {
-        font-size: 36px;
-        margin: 64px 0 34px;
-    }
-
-    .main-section {
-        width: 92%;
-        padding: 28px 24px;
-    }
-
-    .step-title {
-        font-size: 22px;
-    }
-
-    .main-section h5 {
-        font-size: 16px;
-    }
-
-    #stack-heading {
-        font-size: 27px;
-        margin-top: 72px;
-    }
-
-    .stack-introduction {
-        width: 92%;
-        padding: 26px 24px;
-    }
-
-    .stack-introduction p,
-    .stack-description {
-        font-size: 16px;
-    }
-
-    .stack-card {
-        padding: 34px 26px 30px;
-    }
-
-    .stack-card::after {
-        inset: 10px;
-        width: 16px;
-        height: 16px;
-    }
-
-    .stack-card h2 {
-        font-size: 21px;
-    }
-
-    .stack-card h3 {
-        font-size: 13px;
-    }
-
-    .stack-card p,
-    .stack-card ul {
-        font-size: 16px;
-    }
+    .stack-card { padding: 40px 22px 32px; }
+    .stack-card::before { left: 24px; width: 90px; }
+    .stack-card h2 { font-size: 25px; }
+    .stack-card h3 { font-size: 17px; }
+    .stack-card h3 + p, .stack-card ul { font-size: 16px; }
+    .stack-card h3:last-of-type + p { font-size: 16px; }
 }
