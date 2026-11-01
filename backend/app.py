@@ -875,7 +875,25 @@ def recommend_stack():
 
         recommendation = getattr(response, "parsed", None)
         if recommendation is None:
-            recommendation = json.loads(response_text)
+            cleaned = response_text.strip()
+
+    # Remove Markdown JSON fences, if Gemini included them
+            if cleaned.startswith("```"):
+                cleaned = cleaned.split("\n", 1)[-1]
+                if cleaned.endswith("```"):
+                    cleaned = cleaned[:-3].strip()
+
+            try:
+                recommendation = json.loads(cleaned)
+            except json.JSONDecodeError:
+                app.logger.error(
+                    "Gemini returned invalid JSON. Finish reason: %s. Response: %s",
+                    finish_reason,
+                    response_text[:2000],
+        )
+                return jsonify({
+                    "error": "Gemini returned an invalid response. Please try again."
+        }), 502
 
         result = _validate_and_format_phase2_recommendation(recommendation)
 
