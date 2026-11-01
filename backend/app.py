@@ -758,7 +758,7 @@ OUTPUT REQUIREMENTS:
             config={
                 "response_mime_type": "application/json",
                 "response_json_schema": RECOMMENDATION_SCHEMA,
-                "temperature": 0.2,
+                "temperature": 0.8,
                 "max_output_tokens": 2200,
             },
         )
