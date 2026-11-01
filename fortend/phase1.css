@@ -1,231 +1,464 @@
+/* ======================================================================
+   TOKENS
+   Abyss Navy #0A0E1A   -> page background
+   Panel Slate #121829  -> card surface (base)
+   Panel Light #1B2440  -> card surface (highlight edge)
+   Signal Cyan #4FD6F0  -> primary accent
+   Beacon Amber #FFB454 -> secondary accent
+   Paper #EDF1FA        -> primary text
+   Mist #9AA6C4         -> secondary text
+   ====================================================================== */
 
-/* INTRODUCTION SECTION */
+:root {
+    --bg: #0A0E1A;
+    --panel: #121829;
+    --panel-light: #1B2440;
+    --panel-deep: #0C1120;
+    --line: rgba(255, 255, 255, 0.07);
+    --line-soft: rgba(255, 255, 255, 0.04);
+    --cyan: #4FD6F0;
+    --amber: #FFB454;
+    --paper: #EDF1FA;
+    --mist: #9AA6C4;
+    --mist-dim: #6C7793;
+
+    --font-display: "Space Grotesk", "Segoe UI", sans-serif;
+    --font-body: "Inter", "Segoe UI", sans-serif;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    margin: 0;
+    font-family: var(--font-body);
+    background-color: var(--bg);
+    color: var(--paper);
+    background-image:
+        radial-gradient(circle at 15% 8%, rgba(79, 214, 240, 0.08), transparent 42%),
+        radial-gradient(circle at 85% 28%, rgba(255, 180, 84, 0.06), transparent 40%),
+        repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.025) 0px, rgba(255, 255, 255, 0.025) 1px, transparent 1px, transparent 64px),
+        repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.025) 0px, rgba(255, 255, 255, 0.025) 1px, transparent 1px, transparent 64px);
+    background-attachment: fixed;
+    padding-bottom: 60px;
+}
+
+/* ======================================================================
+   SHARED PANEL "EMBOSS" TREATMENT
+   ====================================================================== */
+
+#phase1-intro,
+.main-section,
+.stack-introduction {
+    position: relative;
+    max-width: 860px;
+    background: linear-gradient(160deg, var(--panel-light) 0%, var(--panel) 55%, var(--panel-deep) 100%);
+    border: 1px solid var(--line);
+    box-shadow:
+        0 22px 46px rgba(0, 0, 0, 0.55),
+        0 2px 0 rgba(255, 255, 255, 0.04) inset,
+        0 -18px 30px rgba(0, 0, 0, 0.25) inset;
+}
+
+/* ======================================================================
+   INTRODUCTION PANEL
+   ====================================================================== */
+
 #phase1-intro {
-    width: 90%;
-    margin: 70px auto;
-    padding: 30px;
-    background-color: white;
-    border-radius: 50px;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.20);
+    width: 88%;
+    margin: 80px auto 56px;
+    padding: 48px 52px;
+    border-radius: 26px;
 }
 
-/* MAIN HEADING */
 #phase1-heading {
-    font-size: 32px;
-    font-weight: 900;
-    color: black;
-}
-
-/* INTRODUCTION HEADINGS */
-#intro-heading,
-#important-heading {
-    font-size: 24px;
+    font-family: var(--font-display);
+    font-size: 34px;
     font-weight: 700;
-    color: black;
+    letter-spacing: -0.01em;
+    color: var(--paper);
+    margin: 0 0 6px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--line);
 }
 
-/* INTRODUCTION TEXT */
+/* content element, but left empty in the markup -- collapse the gap it
+   would otherwise leave rather than showing a blank heading */
+#intro-heading {
+    display: none;
+}
+
 #intro-text {
-    font-size: 20px;
-    font-weight: 500;
-    line-height: 1.7;
-    color: rgb(62, 12, 12);
+    font-family: var(--font-body);
+    font-size: 18px;
+    font-weight: 400;
+    line-height: 1.8;
+    color: var(--mist);
+    margin-top: 26px;
+    max-width: 68ch;
+}
+
+#important-heading {
+    font-family: var(--font-display);
+    font-size: 21px;
+    font-weight: 600;
+    color: var(--amber);
+    margin: 40px 0 14px;
 }
 
 #important-text {
-    font-size: 18px;
-    color: rgb(62, 12, 12);
-    line-height: 1.7;
+    font-size: 17px;
+    color: var(--mist);
+    line-height: 1.8;
+    background: rgba(0, 0, 0, 0.18);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--amber);
+    border-radius: 4px;
+    padding: 18px 24px;
 }
 
-/* PHASE DIVIDER HEADING */
+#important-text p {
+    margin: 0 0 10px;
+    color: var(--paper);
+    font-weight: 500;
+}
+
+#important-text ul {
+    margin: 0;
+    padding-left: 22px;
+}
+
+#important-text li {
+    margin: 6px 0;
+}
+
+/* ======================================================================
+   PHASE DIVIDER
+   ====================================================================== */
+
 #middle {
+    position: relative;
     text-align: center;
-    font-size: 50px;
-    color: rgb(121, 55, 55);
-    margin: 60px 0 30px;
+    font-family: var(--font-display);
+    font-size: 58px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: var(--paper);
+    margin: 90px 0 44px;
+    text-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.12),
+        0 2px 0 rgba(0, 0, 0, 0.3),
+        0 10px 24px rgba(0, 0, 0, 0.6),
+        0 0 46px rgba(79, 214, 240, 0.18);
 }
 
 #middle::after {
     content: "";
     display: block;
-    width: 80%;
-    height: 6px;
-    background-color: rgb(108, 22, 22);
-    margin: 25px auto 0;
+    width: 220px;
+    height: 4px;
+    border-radius: 2px;
+    background: linear-gradient(90deg, transparent, var(--cyan), var(--amber), transparent);
+    margin: 28px auto 0;
+    box-shadow: 0 0 18px rgba(79, 214, 240, 0.5);
 }
 
-/* MAIN STEP CARDS */
+/* ======================================================================
+   STEP / NOTE PANELS
+   ====================================================================== */
+
 .main-section {
-    width: 90%;
-    margin: 50px auto;
-    padding: 30px;
-    background-color: white;
-    border-radius: 20px;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.20);
-    box-sizing: border-box;
+    width: 88%;
+    margin: 36px auto;
+    padding: 40px 48px;
+    border-radius: 18px;
 }
 
 .main-section h2 {
-    font-size: 30px;
-    padding: 0;
-    text-align: center;
-    color: black;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-size: 19px;
+    font-weight: 600;
+    color: var(--panel-deep);
+    background: linear-gradient(160deg, var(--cyan), #2fb8d6);
+    padding: 8px 22px;
+    border-radius: 999px;
+    box-shadow:
+        0 8px 16px rgba(79, 214, 240, 0.25),
+        0 1px 0 rgba(255, 255, 255, 0.4) inset;
+    margin: 0 auto 22px;
 }
 
 .step-title {
-    font-size: 30px;
-    padding: 0;
-    text-align: center;
-    color: rgb(149, 48, 48);
+    font-family: var(--font-display);
+    font-size: 27px;
     font-weight: 600;
+    text-align: center;
+    color: var(--paper);
+    margin: 0 0 26px;
 }
 
 .main-section h5 {
-    font-size: 20px;
-    padding: 0;
-    text-align: center;
-    line-height: 1.6;
-    font-weight: 500;
+    font-family: var(--font-body);
+    font-size: 17px;
+    font-weight: 400;
+    text-align: left;
+    line-height: 1.75;
+    color: var(--mist);
+    max-width: 62ch;
+    margin: 14px auto;
+    padding-left: 18px;
+    border-left: 2px solid var(--line);
 }
 
-/* TECHNOLOGY STACKS HEADING */
+/* ======================================================================
+   TECHNOLOGY STACKS HEADING
+   ====================================================================== */
+
 #stack-heading {
     text-align: center;
+    font-family: var(--font-display);
     font-size: 40px;
-    font-weight: 900;
-    color: rgb(121, 55, 55);
-    margin: 80px 0 30px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    color: var(--paper);
+    margin: 100px 0 34px;
+    text-shadow: 0 8px 20px rgba(0, 0, 0, 0.55);
 }
 
 #stack-heading::after {
     content: "";
     display: block;
-    width: 80%;
-    height: 6px;
-    background-color: rgb(108, 22, 22);
-    margin: 25px auto 0;
+    width: 220px;
+    height: 4px;
+    border-radius: 2px;
+    background: linear-gradient(90deg, transparent, var(--amber), var(--cyan), transparent);
+    margin: 28px auto 0;
+    box-shadow: 0 0 18px rgba(255, 180, 84, 0.45);
 }
 
-/* TECHNOLOGY STACKS INTRODUCTION */
 .stack-introduction {
-    width: 90%;
-    margin: 40px auto;
-    padding: 30px;
-    background-color: white;
-    border-radius: 20px;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.20);
-    box-sizing: border-box;
+    width: 88%;
+    margin: 0 auto 50px;
+    padding: 34px 48px;
+    border-radius: 18px;
 }
 
 .stack-introduction p {
-    font-size: 20px;
-    font-weight: 600;
-    color: rgb(62, 12, 12);
+    font-size: 18px;
+    font-weight: 400;
+    color: var(--mist);
     text-align: center;
-    line-height: 1.7;
+    line-height: 1.8;
+    max-width: 62ch;
+    margin: 10px auto;
 }
 
-/* INDIVIDUAL STACK CARDS */
+/* ======================================================================
+   STACK MODULE CARDS
+   Each card gets a per-module accent colour via nth-of-type, drawn as a
+   top signal strip plus two schematic corner marks.
+   ====================================================================== */
+
+.stack-card {
+    --card-accent: var(--cyan);
+    padding: 44px 48px 40px;
+    border-radius: 10px;
+    overflow: visible;
+    transition: transform 0.35s ease, box-shadow 0.35s ease;
+    transform-style: preserve-3d;
+}
+
+.stack-card::before {
+    /* top signal strip */
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 32px;
+    right: 32px;
+    height: 3px;
+    background: var(--card-accent);
+    box-shadow: 0 0 14px var(--card-accent);
+    border-radius: 0 0 3px 3px;
+}
+
+.stack-card::after {
+    content: "";
+    position: absolute;
+    inset: 14px;
+    border-top: 2px solid var(--card-accent);
+    border-left: 2px solid var(--card-accent);
+    width: 22px;
+    height: 22px;
+    opacity: 0.55;
+    pointer-events: none;
+}
+
+.stack-card:hover {
+    transform: perspective(1000px) rotateX(1.5deg) translateY(-6px);
+    box-shadow:
+        0 32px 60px rgba(0, 0, 0, 0.6),
+        0 2px 0 rgba(255, 255, 255, 0.04) inset,
+        0 -18px 30px rgba(0, 0, 0, 0.25) inset;
+}
+
+.stack-card:nth-of-type(1) { --card-accent: #4FD6F0; } /* MERN */
+.stack-card:nth-of-type(2) { --card-accent: #FFB454; } /* MEAN */
+.stack-card:nth-of-type(3) { --card-accent: #7C9CFF; } /* Django */
+.stack-card:nth-of-type(4) { --card-accent: #3ED6A5; } /* LAMP */
+.stack-card:nth-of-type(5) { --card-accent: #FF8B6B; } /* Flask */
+.stack-card:nth-of-type(6) { --card-accent: #D6A4FF; } /* Spring Boot */
+
 .stack-card h2 {
-    color: rgb(121, 55, 55);
-    margin-bottom: 15px;
+    display: block;
+    background: none;
+    box-shadow: none;
+    border-radius: 0;
+    padding: 0;
+    color: var(--card-accent);
+    font-size: 25px;
+    text-align: left;
+    margin: 6px 0 6px;
 }
 
 .stack-description {
-    font-size: 20px;
-    font-weight: 600;
-    color: rgb(121, 55, 55);
-    text-align: center;
+    font-size: 17px;
+    font-weight: 400;
+    font-style: italic;
+    color: var(--mist-dim);
+    text-align: left;
     line-height: 1.6;
+    margin: 0 0 30px;
+    padding-bottom: 22px;
+    border-bottom: 1px solid var(--line);
 }
 
 .stack-card h3 {
-    font-size: 22px;
-    padding: 0;
-    text-align: center;
-    color: rgb(108, 22, 22);
-    margin: 30px 0 10px;
+    font-family: var(--font-display);
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-align: left;
+    color: var(--card-accent);
+    margin: 26px 0 8px;
 }
 
 .stack-card p {
-    font-size: 19px;
-    color: rgb(62, 12, 12);
-    text-align: center;
+    font-size: 17px;
+    color: var(--paper);
+    text-align: left;
     line-height: 1.7;
+    margin: 0;
+}
+
+/* the closing "why choose this" paragraph reads better in the muted tone */
+.stack-card h3:last-of-type + p {
+    color: var(--mist);
 }
 
 /* STACK USES LIST */
 .stack-card ul {
-    width: fit-content;
-    max-width: 90%;
-    margin: 15px auto;
-    padding-left: 30px;
-    color: rgb(62, 12, 12);
-    font-size: 19px;
-    line-height: 1.9;
+    width: auto;
+    max-width: none;
+    margin: 4px 0 0;
+    padding-left: 20px;
+    color: var(--paper);
+    font-size: 17px;
+    line-height: 2;
 }
 
-/* MOBILE RESPONSIVENESS */
+.stack-card li {
+    padding-left: 4px;
+}
+
+.stack-card li::marker {
+    color: var(--card-accent);
+}
+
+/* ======================================================================
+   MOBILE RESPONSIVENESS
+   ====================================================================== */
+
 @media (max-width: 600px) {
 
     #phase1-intro {
-        width: 95%;
-        padding: 20px;
-        border-radius: 30px;
-        box-sizing: border-box;
+        width: 92%;
+        padding: 30px 26px;
+        border-radius: 20px;
     }
 
     #phase1-heading {
-        font-size: 28px;
-    }
-
-    #intro-text {
-        font-size: 17px;
-    }
-
-    #middle {
-        font-size: 38px;
-    }
-
-    .main-section {
-        width: 95%;
-        padding: 20px;
-    }
-
-    .main-section h2 {
         font-size: 26px;
     }
 
+    #intro-text {
+        font-size: 16px;
+    }
+
+    #important-text {
+        padding: 16px 18px;
+    }
+
+    #middle {
+        font-size: 36px;
+        margin: 64px 0 34px;
+    }
+
+    .main-section {
+        width: 92%;
+        padding: 28px 24px;
+    }
+
     .step-title {
-        font-size: 25px;
+        font-size: 22px;
     }
 
     .main-section h5 {
-        font-size: 17px;
+        font-size: 16px;
     }
 
     #stack-heading {
-        font-size: 29px;
-        margin-top: 60px;
+        font-size: 27px;
+        margin-top: 72px;
     }
 
     .stack-introduction {
-        width: 95%;
-        padding: 20px;
+        width: 92%;
+        padding: 26px 24px;
     }
 
     .stack-introduction p,
     .stack-description {
-        font-size: 17px;
+        font-size: 16px;
+    }
+
+    .stack-card {
+        padding: 34px 26px 30px;
+    }
+
+    .stack-card::after {
+        inset: 10px;
+        width: 16px;
+        height: 16px;
+    }
+
+    .stack-card h2 {
+        font-size: 21px;
     }
 
     .stack-card h3 {
-        font-size: 20px;
+        font-size: 13px;
     }
 
     .stack-card p,
     .stack-card ul {
-        font-size: 17px;
+        font-size: 16px;
     }
 }
