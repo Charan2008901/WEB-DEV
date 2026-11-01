@@ -6,20 +6,27 @@
     <title>Phase 1 - Web Development</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="phase1.css">
 </head>
 <body>
-
-    <!-- decorative 3D environment (no content) -->
-    <div id="progress" aria-hidden="true"></div>
-    <div id="scene" aria-hidden="true"></div>
-    <div id="floor" aria-hidden="true"></div>
 
     <!-- INTRODUCTION -->
     <section id="phase1-intro">
 
         <h1 id="phase1-heading">Phase 1: Introduction</h1>
+
+        <!-- decorative 3D layer stack (no content) -->
+        <div class="stage" aria-hidden="true">
+            <div class="layers">
+                <div class="plate shadow"></div>
+                <div class="plate"></div>
+                <div class="plate"></div>
+                <div class="plate"></div>
+                <div class="plate"></div>
+                <div class="plate"></div>
+            </div>
+        </div>
 
         <h2 id="intro-heading"></h2>
 
@@ -396,102 +403,65 @@
     (function () {
         var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
         var root = document.documentElement;
+        var NS = "http://www.w3.org/2000/svg";
 
-        /* ---------- floating wireframe cubes ---------- */
-        var scene = document.getElementById("scene");
-        var defs = [
-            { l: 3,  t: 14, s: 110, d: 0.10, c: "",     z: -120, t2: 60 },
-            { l: 90, t: 22, s: 150, d: 0.18, c: "blue", z: -60,  t2: 75 },
-            { l: 6,  t: 58, s: 70,  d: 0.28, c: "blue", z: 80,   t2: 45 },
-            { l: 92, t: 66, s: 95,  d: 0.14, c: "",     z: -200, t2: 70 },
-            { l: 48, t: 8,  s: 60,  d: 0.22, c: "blue", z: -300, t2: 55 },
-            { l: 80, t: 88, s: 120, d: 0.32, c: "",     z: 40,   t2: 65 }
-        ];
-        var cws = defs.map(function (o) {
-            var cw = document.createElement("div");
-            cw.className = "cw";
-            cw.style.left = o.l + "%";
-            cw.style.top = o.t + "%";
-            var cube = document.createElement("div");
-            cube.className = "cube " + o.c;
-            cube.style.setProperty("--s", o.s + "px");
-            cube.style.setProperty("--t", o.t2 + "s");
-            for (var i = 0; i < 6; i++) cube.appendChild(document.createElement("i"));
-            cw.appendChild(cube);
-            scene.appendChild(cw);
-            return { el: cw, o: o };
-        });
-
-        var mx = 0, my = 0, ticking = false;
-        function frame() {
-            ticking = false;
-            var sy = window.scrollY || 0;
-            var max = document.body.scrollHeight - window.innerHeight;
-            root.style.setProperty("--sy", sy);
-            root.style.setProperty("--p", max > 0 ? Math.min(1, sy / max) : 0);
-            if (reduce) return;
-            cws.forEach(function (c) {
-                var y = -sy * c.o.d;
-                var x = mx * c.o.d * 120;
-                var yy = my * c.o.d * 80;
-                c.el.style.transform = "translate3d(" + x + "px," + (y + yy) + "px," + c.o.z + "px)";
-            });
+        /* ---- hero stack: spreads apart as you scroll, turns with the pointer ---- */
+        var hero = document.getElementById("phase1-intro");
+        function onScroll() {
+            if (reduce || !hero) return;
+            var h = hero.offsetHeight || 1;
+            var t = Math.max(0, Math.min(1, (window.scrollY || 0) / (h * 0.9)));
+            root.style.setProperty("--explode", t.toFixed(3));
         }
-        function request() { if (!ticking) { ticking = true; requestAnimationFrame(frame); } }
-        window.addEventListener("scroll", request, { passive: true });
-        window.addEventListener("resize", request);
-        window.addEventListener("pointermove", function (e) {
-            mx = e.clientX / window.innerWidth - 0.5;
-            my = e.clientY / window.innerHeight - 0.5;
-            request();
-        }, { passive: true });
-        frame();
+        window.addEventListener("scroll", onScroll, { passive: true });
+        onScroll();
 
-        /* ---------- tilt + scroll reveal ---------- */
-        var targets = [
-            ["#phase1-intro", 3],
-            [".main-section", 3],
-            [".stack-introduction", 3],
-            ["#middle", 12],
-            ["#stack-heading", 8]
-        ];
-        var seen = [];
-        targets.forEach(function (pair) {
-            document.querySelectorAll(pair[0]).forEach(function (el) {
-                if (seen.indexOf(el) !== -1) return;
-                seen.push(el);
-                el.classList.add("tilt");
-                if (!reduce) el.classList.add("reveal");
-                var max = pair[1];
-                el.addEventListener("pointermove", function (e) {
-                    if (e.pointerType !== "mouse" || reduce) return;
-                    var r = el.getBoundingClientRect();
-                    var px = (e.clientX - r.left) / r.width;
-                    var py = (e.clientY - r.top) / r.height;
-                    el.style.setProperty("--ry", ((px - 0.5) * 2 * max).toFixed(2) + "deg");
-                    el.style.setProperty("--rx", (-(py - 0.5) * 2 * max).toFixed(2) + "deg");
-                    el.style.setProperty("--mx", (px * 100).toFixed(1) + "%");
-                    el.style.setProperty("--my", (py * 100).toFixed(1) + "%");
-                    el.classList.add("tilting");
-                });
-                el.addEventListener("pointerleave", function () {
-                    el.style.setProperty("--ry", "0deg");
-                    el.style.setProperty("--rx", "0deg");
-                    el.classList.remove("tilting");
-                });
-            });
-        });
-
-        if ("IntersectionObserver" in window && !reduce) {
-            var io = new IntersectionObserver(function (entries) {
-                entries.forEach(function (en) {
-                    if (en.isIntersecting) { en.target.classList.add("in"); io.unobserve(en.target); }
-                });
-            }, { threshold: 0.08 });
-            seen.forEach(function (el) { io.observe(el); });
-        } else {
-            seen.forEach(function (el) { el.classList.add("in"); });
+        if (!reduce) {
+            window.addEventListener("pointermove", function (e) {
+                if (e.pointerType !== "mouse") return;
+                root.style.setProperty("--turn", (e.clientX / window.innerWidth * 2 - 1).toFixed(3));
+                root.style.setProperty("--lift", (e.clientY / window.innerHeight * 2 - 1).toFixed(3));
+            }, { passive: true });
         }
+
+        /* ---- isometric icon on each stack card: one layer per component ---- */
+        var palette = [
+            { top: "#2457D6", left: "#1A41A8", right: "#163584" },
+            { top: "#713B35", left: "#5E2F2A", right: "#43201D" },
+            { top: "#D8CBA4", left: "#C9BB92", right: "#B8A97F" },
+            { top: "#F7F3E8", left: "#E6DDBE", right: "#D8CBA4" }
+        ];
+        function poly(pts, fill) {
+            var p = document.createElementNS(NS, "polygon");
+            p.setAttribute("points", pts);
+            p.setAttribute("fill", fill);
+            return p;
+        }
+        document.querySelectorAll(".stack-card").forEach(function (card) {
+            var n = 0, labels = card.querySelectorAll("h3");
+            for (var i = 0; i < labels.length; i++) {
+                if (labels[i].textContent.trim() === "Uses") break;
+                n++;
+            }
+            if (n < 1) return;
+            n = Math.min(n, 4);
+            var gap = 34, W = 120, H = 60, T = 12;
+            var svg = document.createElementNS(NS, "svg");
+            svg.setAttribute("class", "iso");
+            svg.setAttribute("aria-hidden", "true");
+            svg.setAttribute("viewBox", "-6 0 132 " + (H + T + gap * (n - 1) + 8));
+            /* draw bottom layer first so upper layers overlap it */
+            for (var k = n - 1; k >= 0; k--) {
+                var y = k * gap, c = palette[k];
+                var g = document.createElementNS(NS, "g");
+                g.style.setProperty("--k", k - (n - 1) / 2);
+                g.appendChild(poly("0," + (y + H / 2) + " " + W / 2 + "," + (y + H / 2 + H / 2) + " " + W / 2 + "," + (y + H / 2 + H / 2 + T) + " 0," + (y + H / 2 + T), c.left));
+                g.appendChild(poly(W / 2 + "," + (y + H) + " " + W + "," + (y + H / 2) + " " + W + "," + (y + H / 2 + T) + " " + W / 2 + "," + (y + H + T), c.right));
+                g.appendChild(poly("0," + (y + H / 2) + " " + W / 2 + "," + y + " " + W + "," + (y + H / 2) + " " + W / 2 + "," + (y + H), c.top));
+                svg.appendChild(g);
+            }
+            card.appendChild(svg);
+        });
     })();
     </script>
 

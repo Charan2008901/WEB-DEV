@@ -1,12 +1,12 @@
 /* ======================================================================
-   COLOR SYSTEM (unchanged)
+   COLORS (as specified)
    Main background  antiquewhite  #FAEBD7
    Main text        #263449
    Headings         brown         #713B35
    Primary blue     #2457D6
    Content panels   white         #FFFFFF
-   Panel borders    beige         #F5F5DC / deeper edge #E6DDBE
-   Code backgrounds light         #F7F3E8
+   Panel borders    beige         #F5F5DC (deeper edge tones for depth)
+   Code / folders   light         #F7F3E8
    ====================================================================== */
 
 :root {
@@ -14,20 +14,24 @@
     --text: #263449;
     --text-soft: #4A5A72;
     --heading: #713B35;
-    --heading-deep: #4D2622;
+    --heading-mid: #5E2F2A;
+    --heading-deep: #43201D;
     --blue: #2457D6;
     --blue-dark: #1A41A8;
+    --blue-deep: #163584;
     --panel: #FFFFFF;
     --beige: #F5F5DC;
     --beige-deep: #E6DDBE;
     --beige-edge: #D8CBA4;
     --code-bg: #F7F3E8;
 
-    --font-display: "Space Grotesk", "Segoe UI", sans-serif;
-    --font-body: "Inter", "Segoe UI", sans-serif;
-    --font-code: "JetBrains Mono", ui-monospace, "Consolas", monospace;
+    --font-display: "Bricolage Grotesque", "Segoe UI", sans-serif;
+    --font-body: "Manrope", "Segoe UI", sans-serif;
+    --font-code: "JetBrains Mono", ui-monospace, Consolas, monospace;
 
-    --sy: 0;
+    --explode: 0;   /* 0 -> 1, set by script while scrolling the hero */
+    --turn: 0;      /* -1 -> 1, set by script from the pointer */
+    --lift: 0;      /* -1 -> 1, set by script from the pointer */
 }
 
 * { box-sizing: border-box; }
@@ -37,123 +41,15 @@ html { scroll-behavior: smooth; }
 body {
     margin: 0;
     font-family: var(--font-body);
+    font-size: 18px;
     background-color: var(--bg);
     color: var(--text);
-    padding-bottom: 140px;
+    padding-bottom: 120px;
     overflow-x: hidden;
 }
 
 /* ======================================================================
-   3D ENVIRONMENT (fixed, behind content)
-   ====================================================================== */
-
-#progress {
-    position: fixed;
-    top: 0; left: 0;
-    width: 100%; height: 4px;
-    background: var(--blue);
-    transform-origin: 0 50%;
-    transform: scaleX(var(--p, 0));
-    z-index: 100;
-    box-shadow: 0 2px 8px rgba(36, 87, 214, 0.45);
-}
-
-#scene {
-    position: fixed;
-    inset: 0;
-    perspective: 1300px;
-    overflow: hidden;
-    pointer-events: none;
-    z-index: -2;
-}
-
-.cw {
-    position: absolute;
-    transform-style: preserve-3d;
-    will-change: transform;
-}
-
-.cube {
-    position: relative;
-    width: var(--s);
-    height: var(--s);
-    transform-style: preserve-3d;
-    animation: spin var(--t, 50s) linear infinite;
-}
-
-.cube i {
-    position: absolute;
-    inset: 0;
-    border: 2px solid var(--c, rgba(113, 59, 53, 0.4));
-    background: var(--f, rgba(113, 59, 53, 0.05));
-}
-
-.cube i:nth-child(1) { transform: translateZ(calc(var(--s) / 2)); }
-.cube i:nth-child(2) { transform: rotateY(180deg) translateZ(calc(var(--s) / 2)); }
-.cube i:nth-child(3) { transform: rotateY(90deg) translateZ(calc(var(--s) / 2)); }
-.cube i:nth-child(4) { transform: rotateY(-90deg) translateZ(calc(var(--s) / 2)); }
-.cube i:nth-child(5) { transform: rotateX(90deg) translateZ(calc(var(--s) / 2)); }
-.cube i:nth-child(6) { transform: rotateX(-90deg) translateZ(calc(var(--s) / 2)); }
-
-.cube.blue { --c: rgba(36, 87, 214, 0.5); --f: rgba(36, 87, 214, 0.06); }
-
-@keyframes spin {
-    from { transform: rotateX(-24deg) rotateY(0deg); }
-    to   { transform: rotateX(-24deg) rotateY(360deg); }
-}
-
-/* perspective grid floor */
-#floor {
-    position: fixed;
-    left: 0; right: 0; bottom: 0;
-    height: 46vh;
-    perspective: 520px;
-    overflow: hidden;
-    pointer-events: none;
-    z-index: -1;
-    -webkit-mask-image: linear-gradient(to top, #000 10%, transparent 100%);
-            mask-image: linear-gradient(to top, #000 10%, transparent 100%);
-}
-
-#floor::before {
-    content: "";
-    position: absolute;
-    left: -60%; right: -60%;
-    top: 0; bottom: -40%;
-    transform-origin: 50% 100%;
-    transform: rotateX(68deg);
-    background-image:
-        linear-gradient(rgba(113, 59, 53, 0.22) 2px, transparent 2px),
-        linear-gradient(90deg, rgba(113, 59, 53, 0.22) 2px, transparent 2px);
-    background-size: 70px 70px;
-    background-position: 0 calc(var(--sy) * 0.35px);
-}
-
-/* ======================================================================
-   TILT + REVEAL ENGINE (classes added by script)
-   ====================================================================== */
-
-.tilt {
-    --rx: 0deg; --ry: 0deg; --bry: 0deg; --rev: 0deg; --ty: 0px;
-    transform:
-        perspective(1500px)
-        translate3d(0, var(--ty), 0)
-        rotateX(calc(var(--rx) + var(--rev)))
-        rotateY(calc(var(--ry) + var(--bry)));
-    transition: transform 0.8s cubic-bezier(0.2, 0.7, 0.2, 1), opacity 0.8s ease;
-    will-change: transform;
-}
-
-.tilt.reveal { --rev: 16deg; --ty: 80px; opacity: 0; }
-.tilt.reveal.in { --rev: 0deg; --ty: 0px; opacity: 1; }
-
-.tilt.tilting {
-    transition: transform 0.14s ease-out, opacity 0.8s ease;
-}
-
-/* ======================================================================
-   SHARED 3D SLAB
-   Square-edged, white, with a stacked beige thickness edge
+   PANELS: one consistent slab treatment, used everywhere
    ====================================================================== */
 
 #phase1-intro,
@@ -161,78 +57,45 @@ body {
 .stack-introduction {
     position: relative;
     width: 90%;
-    max-width: 1080px;
+    max-width: 1120px;
     margin-left: auto;
     margin-right: auto;
     background: var(--panel);
     border: 2px solid var(--beige-deep);
-    border-radius: 6px;
-    transform-style: preserve-3d;
+    border-radius: 12px;
     box-shadow:
-        0 1px 0 var(--beige-deep),
-        0 2px 0 var(--beige-deep),
         0 3px 0 var(--beige-deep),
-        0 4px 0 var(--beige-edge),
-        0 5px 0 var(--beige-edge),
         0 6px 0 var(--beige-edge),
-        0 7px 0 var(--beige-edge),
-        0 8px 0 #C9BB92,
-        0 12px 0 rgba(113, 59, 53, 0.10),
-        0 40px 60px -10px rgba(113, 59, 53, 0.35);
+        0 26px 40px -14px rgba(113, 59, 53, 0.34);
 }
-
-/* soft sheen that follows the pointer */
-#phase1-intro.tilt::after,
-.main-section.tilt::after,
-.stack-introduction.tilt::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-    background: radial-gradient(circle at var(--mx, 50%) var(--my, 0%), rgba(250, 235, 215, 0.9), transparent 55%);
-}
-
-#phase1-intro.tilting::after,
-.main-section.tilting::after,
-.stack-introduction.tilting::after { opacity: 1; }
 
 /* ======================================================================
-   INTRODUCTION  (two-column hero)
+   HERO: copy on the left, the 3D layer stack on the right
    ====================================================================== */
 
 #phase1-intro {
-    margin-top: 90px;
-    margin-bottom: 70px;
-    padding: 64px 68px 68px;
+    margin-top: 96px;
+    margin-bottom: 96px;
+    padding: 72px 72px 76px;
     display: grid;
-    grid-template-columns: 1.35fr 1fr;
-    column-gap: 64px;
-    border-top: 8px solid var(--blue);
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+    column-gap: 72px;
 }
 
 #phase1-heading {
-    grid-column: 1 / -1;
+    grid-column: 1;
+    grid-row: 1;
+    align-self: center;
     font-family: var(--font-display);
-    font-size: clamp(38px, 5.6vw, 76px);
-    font-weight: 700;
-    line-height: 1.04;
-    letter-spacing: -0.025em;
+    font-size: clamp(42px, 5.6vw, 78px);
+    font-weight: 800;
+    line-height: 1.02;
+    letter-spacing: -0.03em;
     color: var(--heading);
-    margin: 0 0 40px;
-    padding-bottom: 34px;
-    border-bottom: 3px solid var(--beige);
-    text-shadow:
-        1px 1px 0 var(--beige-deep),
-        2px 2px 0 var(--beige-deep),
-        3px 3px 0 var(--beige-edge),
-        4px 4px 0 var(--beige-edge),
-        6px 10px 18px rgba(113, 59, 53, 0.25);
+    margin: 0 0 56px;
 }
 
-/* empty in the markup: hidden so it leaves no blank gap */
+/* empty in the markup: hidden so it leaves no gap */
 #intro-heading { display: none; }
 
 #intro-text {
@@ -240,8 +103,8 @@ body {
     grid-row: 2 / span 2;
     font-family: var(--font-body);
     font-size: 20px;
-    font-weight: 400;
-    line-height: 1.85;
+    font-weight: 500;
+    line-height: 1.8;
     color: var(--text);
     margin: 0;
 }
@@ -262,40 +125,101 @@ body {
     grid-row: 3;
     align-self: start;
     font-size: 18px;
-    color: var(--text);
     line-height: 1.8;
+    color: var(--text);
     background: var(--code-bg);
     border: 2px solid var(--beige-deep);
-    border-left: 8px solid var(--blue);
-    border-radius: 4px;
+    border-left: 6px solid var(--blue);
+    border-radius: 6px;
     padding: 24px 28px;
-    transform: translateZ(40px);
-    box-shadow:
-        0 1px 0 var(--beige-deep),
-        0 2px 0 var(--beige-deep),
-        0 3px 0 var(--beige-edge),
-        0 4px 0 var(--beige-edge),
-        0 24px 30px -8px rgba(113, 59, 53, 0.35);
+    box-shadow: 0 3px 0 var(--beige-deep), 0 4px 0 var(--beige-edge);
 }
 
-#important-text p { margin: 0 0 10px; font-weight: 600; }
+#important-text p { margin: 0 0 8px; font-weight: 700; }
 #important-text ul { margin: 0; padding-left: 22px; }
-#important-text li { margin: 8px 0; }
+#important-text li { margin: 6px 0; }
 #important-text li::marker { color: var(--blue); }
 
+/* ---------- the 3D layer stack ---------- */
+
+.stage {
+    grid-column: 2;
+    grid-row: 1;
+    position: relative;
+    min-height: 260px;
+    perspective: 1400px;
+    pointer-events: none;
+}
+
+.layers {
+    position: absolute;
+    left: 50%;
+    top: 58%;
+    width: 230px;
+    height: 230px;
+    margin: -115px 0 0 -115px;
+    transform-style: preserve-3d;
+    transform:
+        rotateX(calc(58deg + var(--lift) * 5deg))
+        rotateZ(calc(-38deg + var(--turn) * 14deg));
+    transition: transform 0.25s ease-out;
+}
+
+.plate {
+    position: absolute;
+    inset: 0;
+    border-radius: 10px;
+    border: 2px solid rgba(0, 0, 0, 0.14);
+    /* each plate rises by its index, spreading further as --explode grows */
+    transform: translateZ(calc(var(--i) * (34px + var(--explode) * 70px)));
+}
+
+/* bottom -> top: the stack the page is about */
+.plate:nth-child(1) { --i: 0; background: var(--heading-mid); }
+.plate:nth-child(2) { --i: 1; background: var(--beige-edge); }
+.plate:nth-child(3) { --i: 2; background: var(--code-bg); }
+.plate:nth-child(4) { --i: 3; background: var(--panel); }
+.plate:nth-child(5) { --i: 4; background: var(--blue); border-color: var(--blue-dark); }
+
+/* thin "UI" detail on the faces so the plates read as layers, not blocks */
+.plate:nth-child(5)::before,
+.plate:nth-child(4)::before {
+    content: "";
+    position: absolute;
+    inset: 22px;
+    background:
+        linear-gradient(rgba(255,255,255,0.55) 0 0) 0 0 / 100% 12px no-repeat,
+        linear-gradient(rgba(255,255,255,0.30) 0 0) 0 28px / 70% 12px no-repeat,
+        linear-gradient(rgba(255,255,255,0.30) 0 0) 0 52px / 85% 12px no-repeat;
+}
+.plate:nth-child(4)::before {
+    background:
+        linear-gradient(var(--beige-deep) 0 0) 0 0 / 100% 12px no-repeat,
+        linear-gradient(var(--beige) 0 0) 0 28px / 70% 12px no-repeat,
+        linear-gradient(var(--beige) 0 0) 0 52px / 85% 12px no-repeat;
+}
+
+/* ground shadow */
+.plate.shadow {
+    background: rgba(67, 32, 29, 0.35);
+    border: 0;
+    filter: blur(18px);
+    transform: translateZ(-20px) scale(1.05);
+}
+
 /* ======================================================================
-   PHASE DIVIDER  (deeply extruded 3D lettering)
+   PHASE DIVIDER: deep 3D lettering
    ====================================================================== */
 
 #middle {
     text-align: center;
     font-family: var(--font-display);
-    font-size: clamp(64px, 11vw, 150px);
-    font-weight: 700;
-    letter-spacing: 0.03em;
+    font-size: clamp(72px, 12vw, 168px);
+    font-weight: 800;
+    letter-spacing: 0.02em;
     line-height: 1;
     color: var(--heading);
-    margin: 110px 0 70px;
+    margin: 40px 0 96px;
     text-shadow:
         1px 1px 0 #66352F,
         2px 2px 0 #66352F,
@@ -309,80 +233,73 @@ body {
         10px 10px 0 #43201D,
         11px 11px 0 #3A1B18,
         12px 12px 0 #3A1B18,
-        20px 28px 36px rgba(60, 25, 20, 0.45);
+        22px 30px 38px rgba(60, 25, 20, 0.42);
 }
 
 #middle::after {
     content: "";
     display: block;
-    width: min(420px, 60%);
+    width: 160px;
     height: 10px;
     background: var(--blue);
-    margin: 56px auto 0;
-    box-shadow: 0 5px 0 var(--blue-dark), 0 12px 0 rgba(26, 65, 168, 0.25), 0 24px 26px rgba(36, 87, 214, 0.3);
+    margin: 64px auto 0;
+    border-radius: 2px;
+    box-shadow: 0 5px 0 var(--blue-dark);
 }
 
 /* ======================================================================
-   STEP PANELS  (label column + content column)
+   STEPS: label column | content column
    ====================================================================== */
 
 .main-section {
-    margin-top: 56px;
-    margin-bottom: 56px;
-    padding: 56px 64px;
+    margin-top: 40px;
+    margin-bottom: 40px;
+    padding: 60px 72px;
     display: grid;
-    grid-template-columns: 330px 1fr;
-    column-gap: 64px;
-    row-gap: 0;
+    grid-template-columns: 320px minmax(0, 1fr);
+    column-gap: 72px;
     align-items: start;
 }
 
-.main-section:not(.stack-card):nth-of-type(odd) { --bry: 2.5deg; }
-.main-section:not(.stack-card):nth-of-type(even) { --bry: -2.5deg; }
-
-/* "Step: N" - angled blue tag, lifted off the panel */
 .main-section h2 {
     grid-column: 1;
     grid-row: 1;
     justify-self: start;
     font-family: var(--font-display);
-    font-size: 22px;
+    font-size: 20px;
     font-weight: 700;
-    letter-spacing: 0.01em;
     color: #FFFFFF;
-    background: linear-gradient(180deg, #3A6AE6, var(--blue));
-    padding: 14px 44px 14px 26px;
-    margin: 0 0 30px;
-    clip-path: polygon(0 0, 100% 0, calc(100% - 20px) 100%, 0 100%);
-    transform: translateZ(50px);
-    filter: drop-shadow(0 8px 0 var(--blue-dark));
+    background: var(--blue);
+    padding: 10px 22px;
+    margin: 0 0 28px;
+    border-radius: 4px;
+    box-shadow: 0 4px 0 var(--blue-dark), 0 5px 0 var(--blue-deep);
 }
 
 .step-title {
     grid-column: 1;
     grid-row: 2 / span 20;
     font-family: var(--font-display);
-    font-size: clamp(28px, 3vw, 40px);
-    font-weight: 700;
-    line-height: 1.15;
-    letter-spacing: -0.015em;
+    font-size: clamp(30px, 3.2vw, 42px);
+    font-weight: 800;
+    line-height: 1.12;
+    letter-spacing: -0.02em;
     text-align: left;
     color: var(--heading);
     margin: 0;
-    transform: translateZ(30px);
 }
 
 .main-section h5 {
     grid-column: 2;
     font-family: var(--font-body);
     font-size: 19px;
-    font-weight: 400;
+    font-weight: 500;
     line-height: 1.75;
     text-align: left;
     color: var(--text);
-    margin: 0 0 18px;
-    padding: 6px 0 6px 24px;
-    border-left: 5px solid var(--beige-deep);
+    margin: 0 0 20px;
+    padding: 4px 0 4px 24px;
+    border-left: 4px solid var(--beige-deep);
 }
 
 .main-section h5:first-of-type { border-left-color: var(--blue); }
@@ -394,12 +311,12 @@ body {
 #stack-heading {
     text-align: center;
     font-family: var(--font-display);
-    font-size: clamp(34px, 5.6vw, 76px);
-    font-weight: 700;
+    font-size: clamp(36px, 5.6vw, 78px);
+    font-weight: 800;
     line-height: 1.08;
-    letter-spacing: -0.015em;
+    letter-spacing: -0.02em;
     color: var(--heading);
-    margin: 130px 24px 70px;
+    margin: 140px 24px 80px;
     text-shadow:
         1px 1px 0 #66352F,
         2px 2px 0 #66352F,
@@ -415,44 +332,44 @@ body {
 #stack-heading::after {
     content: "";
     display: block;
-    width: min(420px, 60%);
+    width: 160px;
     height: 10px;
     background: var(--blue);
-    margin: 48px auto 0;
-    box-shadow: 0 5px 0 var(--blue-dark), 0 12px 0 rgba(26, 65, 168, 0.25), 0 24px 26px rgba(36, 87, 214, 0.3);
+    margin: 56px auto 0;
+    border-radius: 2px;
+    box-shadow: 0 5px 0 var(--blue-dark);
 }
 
 .stack-introduction {
     margin-top: 0;
-    margin-bottom: 70px;
-    padding: 48px 64px;
+    margin-bottom: 80px;
+    padding: 52px 72px;
     display: grid;
     grid-template-columns: 1fr 1fr;
-    column-gap: 64px;
-    border-top: 8px solid var(--blue);
+    column-gap: 72px;
 }
 
 .stack-introduction p {
     font-size: 20px;
+    font-weight: 500;
+    line-height: 1.8;
     color: var(--text);
     text-align: left;
-    line-height: 1.8;
     margin: 0;
 }
 
 /* ======================================================================
-   STACK CARDS  (spec-sheet layout: label | value)
+   STACK CARDS: spec-sheet layout + isometric layer icon
    ====================================================================== */
 
 .stack-card {
-    margin-top: 64px;
-    margin-bottom: 64px;
-    padding: 64px 64px 56px;
-    grid-template-columns: 220px 1fr;
+    margin-top: 56px;
+    margin-bottom: 56px;
+    padding: 64px 72px 60px;
+    grid-template-columns: 220px minmax(0, 1fr);
     column-gap: 48px;
-    row-gap: 18px;
+    row-gap: 20px;
     align-items: center;
-    border-top: 8px solid var(--blue);
 }
 
 .stack-card h2 {
@@ -460,35 +377,28 @@ body {
     grid-row: auto;
     justify-self: start;
     background: none;
-    filter: none;
-    clip-path: none;
-    padding: 0;
+    box-shadow: none;
+    border-radius: 0;
+    padding: 0 200px 0 0;
     margin: 0;
     color: var(--heading);
-    font-size: clamp(32px, 4vw, 54px);
-    font-weight: 700;
-    line-height: 1.1;
-    letter-spacing: -0.02em;
-    transform: translateZ(60px);
-    text-shadow:
-        1px 1px 0 var(--beige-deep),
-        2px 2px 0 var(--beige-deep),
-        3px 3px 0 var(--beige-edge),
-        4px 4px 0 var(--beige-edge),
-        6px 10px 14px rgba(113, 59, 53, 0.25);
+    font-size: clamp(34px, 4vw, 56px);
+    font-weight: 800;
+    line-height: 1.08;
+    letter-spacing: -0.025em;
 }
 
 .stack-description {
     grid-column: 1 / -1;
     font-size: 20px;
+    font-weight: 500;
     font-style: italic;
     color: var(--text-soft);
     text-align: left;
     line-height: 1.6;
-    margin: 0 0 18px;
+    margin: 0 0 12px;
     padding-bottom: 28px;
     border-bottom: 3px solid var(--beige);
-    transform: translateZ(25px);
 }
 
 .stack-card h3 {
@@ -497,7 +407,7 @@ body {
     align-items: center;
     gap: 12px;
     font-family: var(--font-display);
-    font-size: 19px;
+    font-size: 20px;
     font-weight: 700;
     text-align: left;
     color: var(--heading);
@@ -514,104 +424,115 @@ body {
     box-shadow: 3px 3px 0 var(--blue-dark);
 }
 
-/* values: light code-style tiles that sit above the card */
+/* values: light code tiles */
 .stack-card h3 + p {
     grid-column: 2;
     justify-self: start;
     font-family: var(--font-code);
-    font-size: 16.5px;
+    font-size: 16px;
     font-weight: 500;
     color: var(--text);
     text-align: left;
     line-height: 1.6;
     background: var(--code-bg);
     border: 2px solid var(--beige-deep);
-    border-radius: 4px;
+    border-radius: 6px;
     padding: 12px 20px;
     margin: 0;
-    transform: translateZ(22px);
-    box-shadow:
-        0 1px 0 var(--beige-deep),
-        0 2px 0 var(--beige-deep),
-        0 3px 0 var(--beige-edge),
-        0 4px 0 var(--beige-edge),
-        0 14px 18px -6px rgba(113, 59, 53, 0.3);
+    box-shadow: 0 3px 0 var(--beige-deep), 0 4px 0 var(--beige-edge);
 }
 
 .stack-card ul {
     grid-column: 2;
     width: 100%;
-    max-width: none;
     margin: 0;
     padding: 18px 24px 18px 48px;
     background: var(--code-bg);
     border: 2px solid var(--beige-deep);
-    border-radius: 4px;
+    border-radius: 6px;
     color: var(--text);
     font-size: 18px;
+    font-weight: 500;
     line-height: 2;
-    transform: translateZ(22px);
-    box-shadow:
-        0 1px 0 var(--beige-deep),
-        0 2px 0 var(--beige-deep),
-        0 3px 0 var(--beige-edge),
-        0 4px 0 var(--beige-edge),
-        0 14px 18px -6px rgba(113, 59, 53, 0.3);
+    box-shadow: 0 3px 0 var(--beige-deep), 0 4px 0 var(--beige-edge);
 }
 
 .stack-card li::marker { color: var(--blue); }
 
-/* closing "when should you choose" paragraph is prose, not a code tile */
+/* "Uses" label aligns with the first list item, not the middle of the box */
+.stack-card h3:has(+ ul) { align-self: start; padding-top: 18px; }
+
+/* closing paragraph is prose, not a code tile */
 .stack-card h3:last-of-type + p {
     justify-self: stretch;
     font-family: var(--font-body);
     font-size: 19px;
-    font-weight: 400;
+    font-weight: 500;
     line-height: 1.75;
     background: none;
     border: 0;
-    border-left: 6px solid var(--blue);
+    border-left: 5px solid var(--blue);
     border-radius: 0;
     box-shadow: none;
     padding: 4px 0 4px 24px;
-    transform: translateZ(14px);
 }
 
-.stack-card h3:last-of-type { align-self: start; padding-top: 8px; }
+.stack-card h3:last-of-type { align-self: start; padding-top: 6px; }
+
+/* isometric layer icon (added by script): one layer per stack component */
+.iso {
+    position: absolute;
+    top: 52px;
+    right: 68px;
+    width: 112px;
+    height: auto;
+    overflow: visible;
+    pointer-events: none;
+}
+
+.iso g {
+    transition: transform 0.45s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.stack-card:hover .iso g {
+    transform: translateY(calc(var(--k) * -9px));
+}
 
 /* ======================================================================
    TABLET / MOBILE
    ====================================================================== */
 
-@media (max-width: 900px) {
-    #phase1-intro { grid-template-columns: 1fr; padding: 40px 30px 44px; }
+@media (max-width: 960px) {
+    #phase1-intro { grid-template-columns: 1fr; padding: 44px 30px 48px; }
+    #phase1-heading { grid-row: auto; margin-bottom: 8px; }
+    .stage { grid-column: 1; grid-row: auto; min-height: 240px; margin-bottom: 16px; }
     #intro-text, #important-heading, #important-text { grid-column: 1; grid-row: auto; }
     #important-heading { margin-top: 36px; }
 
-    .main-section { grid-template-columns: 1fr; padding: 40px 30px; }
+    .main-section { grid-template-columns: 1fr; padding: 40px 28px; }
     .main-section h2, .step-title, .main-section h5 { grid-column: 1; grid-row: auto; }
     .step-title { margin-bottom: 26px; }
 
-    .stack-introduction { grid-template-columns: 1fr; row-gap: 20px; padding: 36px 30px; }
+    .stack-introduction { grid-template-columns: 1fr; row-gap: 20px; padding: 36px 28px; }
 
-    .stack-card { grid-template-columns: 1fr; padding: 44px 30px 38px; row-gap: 12px; }
+    .stack-card { grid-template-columns: 1fr; padding: 44px 28px 40px; row-gap: 12px; }
+    .stack-card h2 { padding-right: 0; }
     .stack-card h3, .stack-card h3 + p, .stack-card ul { grid-column: 1; }
-    .stack-card h3 { margin-top: 18px; }
-    .stack-card h3:last-of-type { padding-top: 0; }
+    .stack-card h3 { margin-top: 16px; }
+    .stack-card h3:last-of-type, .stack-card h3:has(+ ul) { padding-top: 0; }
+    .iso { display: none; }
 }
 
 @media (max-width: 600px) {
-    #middle { margin: 80px 0 50px; }
-    #stack-heading { margin-top: 90px; }
+    body { font-size: 16px; }
     #intro-text, .stack-introduction p, .main-section h5 { font-size: 17px; }
-    .stack-card h3 + p { font-size: 15px; }
+    #middle { margin-bottom: 70px; }
+    #stack-heading { margin-top: 100px; }
+    .stack-card h3 + p { font-size: 14.5px; }
     .stack-card ul { font-size: 16px; }
     .stack-card h3:last-of-type + p { font-size: 17px; }
-    .tilt { --bry: 0deg !important; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .cube { animation: none; }
-    .tilt, .tilt.tilting { transition: none; }
-    .tilt.reveal { --rev: 0deg; --ty: 0px; opacity: 1; }
+    .layers, .iso g { transition: none; }
 }
