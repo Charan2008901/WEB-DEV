@@ -536,3 +536,325 @@ body {
 @media (prefers-reduced-motion: reduce) {
     .layers, .iso g { transition: none; }
 }
+
+
+/* ======================================================================
+   CINEMATIC REDESIGN — inspired by immersive digital-experience studios
+   Keeps the lesson content and original interactions intact.
+   ====================================================================== */
+
+:root {
+    --bg: #08090d;
+    --text: #e8e9ef;
+    --text-soft: #a5a9b8;
+    --heading: #f4f2f8;
+    --heading-mid: #25283a;
+    --heading-deep: #10121b;
+    --blue: #8b5cf6;
+    --blue-dark: #6d28d9;
+    --blue-deep: #3b1d75;
+    --panel: rgba(17, 19, 29, 0.88);
+    --beige: rgba(255,255,255,0.08);
+    --beige-deep: rgba(255,255,255,0.12);
+    --beige-edge: rgba(255,255,255,0.18);
+    --code-bg: rgba(255,255,255,0.045);
+}
+
+html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 100px;
+    background: var(--bg);
+}
+
+body {
+    position: relative;
+    isolation: isolate;
+    color: var(--text);
+    background:
+        radial-gradient(ellipse at 14% 12%, rgba(94, 45, 160, .24), transparent 34%),
+        radial-gradient(ellipse at 88% 40%, rgba(23, 87, 164, .17), transparent 36%),
+        #08090d;
+    padding-bottom: 80px;
+}
+
+body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    opacity: .22;
+    background-image: radial-gradient(rgba(255,255,255,.55) .65px, transparent .65px);
+    background-size: 5px 5px;
+    mask-image: linear-gradient(to bottom, black, transparent 82%);
+}
+
+/* Top navigation */
+.cinema-nav {
+    position: sticky;
+    top: 14px;
+    z-index: 50;
+    width: min(1180px, calc(100% - 36px));
+    margin: 14px auto -64px;
+    min-height: 58px;
+    padding: 10px 14px 10px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    color: #f7f7fb;
+    background: rgba(13, 14, 21, .72);
+    border: 1px solid rgba(255,255,255,.13);
+    border-radius: 999px;
+    backdrop-filter: blur(18px);
+    box-shadow: 0 12px 40px rgba(0,0,0,.22);
+}
+
+.brand-mark, .nav-links a, .nav-cta {
+    color: inherit;
+    text-decoration: none;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .04em;
+}
+
+.brand-mark {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    white-space: nowrap;
+}
+
+.brand-symbol {
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    color: #fff;
+    background: linear-gradient(145deg, #a78bfa, #6d28d9);
+    border-radius: 9px;
+    font-family: var(--font-display);
+    font-size: 17px;
+}
+
+.nav-links {
+    display: flex;
+    align-items: center;
+    gap: 28px;
+}
+
+.nav-links a {
+    color: #b9bac7;
+    transition: color .2s ease;
+}
+.nav-links a:hover { color: #fff; }
+
+.nav-cta {
+    padding: 11px 16px;
+    border-radius: 999px;
+    background: #f2f0f8;
+    color: #11121a;
+    transition: transform .2s ease, background .2s ease;
+}
+.nav-cta:hover {
+    transform: translateY(-2px);
+    background: #c4b5fd;
+}
+
+/* Hero and panels */
+#phase1-intro,
+.main-section,
+.stack-introduction {
+    background: linear-gradient(145deg, rgba(22,24,36,.96), rgba(12,13,20,.92));
+    border: 1px solid rgba(255,255,255,.12);
+    border-radius: 20px;
+    box-shadow: 0 24px 90px rgba(0,0,0,.34);
+}
+
+#phase1-intro {
+    margin-top: 110px;
+    padding-top: 82px;
+    padding-bottom: 82px;
+    overflow: hidden;
+}
+
+#phase1-intro::before {
+    content: "LEARN / DESIGN / BUILD";
+    position: absolute;
+    top: 28px;
+    left: 72px;
+    color: #a78bfa;
+    font: 700 10px var(--font-code);
+    letter-spacing: .22em;
+}
+
+#phase1-heading,
+.step-title,
+#stack-heading,
+.stack-card h2 {
+    color: #f4f2fa;
+    text-wrap: balance;
+}
+
+#phase1-heading {
+    font-size: clamp(48px, 6.3vw, 88px);
+    letter-spacing: -.055em;
+    max-width: 650px;
+}
+
+#intro-text {
+    color: #bfc2d0;
+    font-size: 18px;
+    line-height: 1.85;
+}
+
+#important-heading {
+    color: #c4b5fd;
+}
+
+#important-text {
+    color: #d8d9e5;
+    background: rgba(139,92,246,.08);
+    border: 1px solid rgba(167,139,250,.24);
+    border-left: 3px solid #a78bfa;
+    border-radius: 12px;
+    box-shadow: none;
+}
+
+#important-text li::marker { color: #a78bfa; }
+
+.stage {
+    filter: drop-shadow(0 20px 45px rgba(124,58,237,.22));
+}
+
+.plate {
+    border-radius: 16px;
+    border-color: rgba(255,255,255,.18);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.14);
+}
+.plate:nth-child(1) { background: #201438; }
+.plate:nth-child(2) { background: #3b2467; }
+.plate:nth-child(3) { background: #5b36a0; }
+.plate:nth-child(4) { background: #7650c7; }
+.plate:nth-child(5) { background: #9b7be8; border-color: #bba7fa; }
+
+/* Large editorial phase marker */
+#middle {
+    color: #f5f3ff;
+    font-size: clamp(70px, 13vw, 176px);
+    letter-spacing: -.07em;
+    text-shadow: 0 12px 60px rgba(139,92,246,.22);
+    margin: 70px 0 100px;
+}
+#middle::after,
+#stack-heading::after {
+    width: 72px;
+    height: 3px;
+    background: #a78bfa;
+    box-shadow: 0 0 22px rgba(167,139,250,.7);
+}
+
+/* Lesson panels */
+.main-section {
+    padding: 58px 64px;
+    transition: border-color .35s ease, transform .35s ease, background .35s ease;
+}
+.main-section:hover {
+    border-color: rgba(167,139,250,.35);
+    transform: translateY(-3px);
+}
+.main-section h2 {
+    color: #e9ddff;
+    background: rgba(139,92,246,.16);
+    border: 1px solid rgba(167,139,250,.25);
+    box-shadow: none;
+    border-radius: 999px;
+    font-size: 12px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+.step-title {
+    font-size: clamp(32px, 3.6vw, 48px);
+    letter-spacing: -.04em;
+}
+.main-section h5 {
+    color: #bfc2d0;
+    border-left-color: rgba(255,255,255,.14);
+}
+.main-section h5:first-of-type { border-left-color: #a78bfa; }
+
+/* Stack section */
+#stack-heading {
+    margin-top: 130px;
+    font-size: clamp(36px, 6vw, 78px);
+    letter-spacing: -.055em;
+}
+.stack-introduction {
+    border-radius: 18px;
+}
+.stack-introduction p {
+    color: #bfc2d0;
+}
+.stack-card {
+    position: relative;
+    overflow: hidden;
+}
+.stack-card h2 {
+    background: none;
+    border: 0;
+    color: #f4f2fa;
+    font-size: clamp(34px, 4vw, 56px);
+    letter-spacing: -.045em;
+    text-transform: none;
+    padding: 0 150px 0 0;
+}
+.stack-description {
+    color: #a5a9b8;
+    border-bottom-color: rgba(255,255,255,.12);
+}
+.stack-card h3 {
+    color: #c4b5fd;
+}
+.stack-card h3::before {
+    background: #a78bfa;
+    box-shadow: 0 0 16px rgba(167,139,250,.45);
+    border-radius: 2px;
+}
+.stack-card h3 + p,
+.stack-card ul {
+    color: #d8d9e5;
+    background: rgba(255,255,255,.045);
+    border: 1px solid rgba(255,255,255,.1);
+    border-radius: 10px;
+    box-shadow: none;
+}
+.stack-card li::marker { color: #a78bfa; }
+.stack-card h3:last-of-type + p {
+    color: #bfc2d0;
+    border-left-color: #a78bfa;
+}
+.iso {
+    filter: drop-shadow(0 8px 24px rgba(139,92,246,.18));
+}
+
+/* Motion and focus */
+a, button { -webkit-tap-highlight-color: transparent; }
+a:focus-visible, button:focus-visible {
+    outline: 2px solid #c4b5fd;
+    outline-offset: 4px;
+}
+::selection { background: #8b5cf6; color: #fff; }
+
+@media (max-width: 960px) {
+    .cinema-nav { margin-bottom: -64px; }
+    #phase1-intro::before { left: 30px; }
+}
+@media (max-width: 600px) {
+    .cinema-nav { width: calc(100% - 20px); top: 8px; }
+    .nav-links { display: none; }
+    .nav-cta { font-size: 11px; padding: 10px 13px; }
+    #phase1-intro { margin-top: 92px; padding-top: 62px; }
+    #phase1-intro::before { left: 24px; font-size: 9px; }
+    .main-section { padding: 36px 24px; }
+    #middle { font-size: 18vw; }
+}
