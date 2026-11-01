@@ -1,236 +1,43 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AI Code Platform — Phase 2</title>
-
   <link rel="stylesheet" href="./phase-2.css">
   <script src="./phase-2.js" defer></script>
-</head>
 
+  <style>
+    .recommendation-primary, .recommendation-card, .recommendation-alternative, .recommendation-next-steps {
+      background: #fff; border: 1px solid #e4e7ec; border-radius: 12px; padding: 20px; margin-top: 18px;
+      box-sizing: border-box;
+    }
+    .recommendation-primary { background: #f8fafc; border-color: #cbd5e1; }
+    .recommendation-eyebrow { margin: 0 0 8px; color: #64748b; font-size: 12px; font-weight: 700; letter-spacing: .08em; }
+    .recommendation-primary h3 { margin: 0 0 6px; font-size: 25px; color: #172554; }
+    .recommendation-primary > p:last-child { line-height: 1.7; }
+    .recommendation-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-top: 14px; }
+    .recommendation-card h3, .recommendation-alternative h3, .recommendation-next-steps h3 { margin: 0 0 10px; font-size: 17px; }
+    .recommendation-card p, .recommendation-alternative p { line-height: 1.65; margin: 0 0 6px; overflow-wrap: anywhere; }
+    .recommendation-muted { color: #64748b; font-size: 14px; }
+    .recommendation-columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    .recommendation-card ul, .recommendation-next-steps ol { padding-left: 22px; margin-bottom: 0; }
+    .recommendation-card li, .recommendation-next-steps li { margin: 8px 0; line-height: 1.55; }
+    .recommendation-alternative { border-left: 4px solid #64748b; }
+    .recommendation-alternative strong { display: inline-block; margin-bottom: 8px; }
+    @media (max-width: 650px) {
+      .recommendation-grid, .recommendation-columns { grid-template-columns: 1fr; }
+      .recommendation-primary, .recommendation-card, .recommendation-alternative, .recommendation-next-steps { padding: 16px; }
+    }
+  </style>
+</head>
 <body>
   <main class="page">
-    <h2>PHASE:2 BACKEND</h2>
+    <h2>PHASE: 2 — TECHNOLOGY STACK RECOMMENDATION</h2>
 
     <section class="hero">
-      <h1>Choose your type</h1>
-      <p>Select a web development stack and describe the website you want to build.</p>
-    </section>
-
-    <section class="framework-tabs" aria-label="Select a web development stack">
-
-      <button type="button" class="framework-tab active"
-        data-framework="mern" aria-pressed="true">
-        <span class="framework-icon">JS</span>
-        <span class="framework-copy">
-          <strong>MERN Stack</strong>
-          <small>MongoDB · Express · React · Node.js</small>
-        </span>
-        <span class="checkmark">✓</span>
-      </button>
-
-      <button type="button" class="framework-tab"
-        data-framework="mean" aria-pressed="false">
-        <span class="framework-icon">JS</span>
-        <span class="framework-copy">
-          <strong>MEAN Stack</strong>
-          <small>MongoDB · Express · Angular · Node.js</small>
-        </span>
-        <span class="checkmark">✓</span>
-      </button>
-
-      <button type="button" class="framework-tab"
-        data-framework="django" aria-pressed="false">
-        <span class="framework-icon">Py</span>
-        <span class="framework-copy">
-          <strong>Python + Django</strong>
-          <small>Python web framework</small>
-        </span>
-        <span class="checkmark">✓</span>
-      </button>
-
-      <button type="button" class="framework-tab"
-        data-framework="lamp" aria-pressed="false">
-        <span class="framework-icon">PHP</span>
-        <span class="framework-copy">
-          <strong>LAMP Stack</strong>
-          <small>Linux · Apache · MySQL · PHP</small>
-        </span>
-        <span class="checkmark">✓</span>
-      </button>
-
-      <button type="button" class="framework-tab"
-        data-framework="flask" aria-pressed="false">
-        <span class="framework-icon">Py</span>
-        <span class="framework-copy">
-          <strong>Python + Flask</strong>
-          <small>Lightweight Python backend</small>
-        </span>
-        <span class="checkmark">✓</span>
-      </button>
-
-      <button type="button" class="framework-tab"
-        data-framework="spring" aria-pressed="false">
-        <span class="framework-icon">Java</span>
-        <span class="framework-copy">
-          <strong>Java Spring Boot</strong>
-          <small>Java application backend</small>
-        </span>
-        <span class="checkmark">✓</span>
-      </button>
-
-      <section class="panel sample-panel">
-        <div class="window-title">📁 Sample Folder Structure</div>
-
-        <div class="panel-heading">
-          <div class="heading-icon">📁</div>
-
-          <div class="heading-text">
-            <h2>Sample backend folder structure</h2>
-            <p id="sampleDescription">
-              A starter structure for the selected stack.
-            </p>
-          </div>
-
-          <span class="framework-badge" id="frameworkBadge">MERN</span>
-        </div>
-
-        <div id="sampleTree" class="folder-tree"
-          aria-label="Sample folder structure"></div>
-
-        <section class="backend-comparison">
-          <h3>Which Stack Should You Choose?</h3>
-
-          <p class="comparison-intro">
-            Compare the advantages, disadvantages, and best use cases.
-          </p>
-
-          <div class="comparison-grid">
-
-            <article class="comparison-card express-card">
-              <h4>🟨 MERN Stack</h4>
-              <h5>Advantages</h5>
-              <ul>
-                <li>Uses JavaScript across the frontend and backend.</li>
-                <li>React supports interactive user interfaces.</li>
-                <li>MongoDB provides a flexible document database.</li>
-              </ul>
-              <h5>Disadvantages</h5>
-              <ul>
-                <li>Requires learning React, Node.js, and database concepts.</li>
-                <li>MongoDB may not be the best fit for every relational data model.</li>
-              </ul>
-              <div class="best-for">
-                <strong>When to use</strong>
-                <p>Interactive websites, dashboards, social apps, and e-commerce projects.</p>
-              </div>
-            </article>
-
-            <article class="comparison-card express-card">
-              <h4>🟨 MEAN Stack</h4>
-              <h5>Advantages</h5>
-              <ul>
-                <li>Uses JavaScript and TypeScript-friendly tooling.</li>
-                <li>Angular provides a structured application framework.</li>
-                <li>Node.js and Express support API development.</li>
-              </ul>
-              <h5>Disadvantages</h5>
-              <ul>
-                <li>Angular has a steeper learning curve for beginners.</li>
-                <li>There are several technologies to configure and maintain.</li>
-              </ul>
-              <div class="best-for">
-                <strong>When to use</strong>
-                <p>Structured business applications, complex dashboards, and large single-page apps.</p>
-              </div>
-            </article>
-
-            <article class="comparison-card flask-card">
-              <h4>🐍 Python + Django</h4>
-              <h5>Advantages</h5>
-              <ul>
-                <li>Includes authentication, an admin interface, and an ORM.</li>
-                <li>Provides a structured approach to larger applications.</li>
-                <li>Includes useful security protections.</li>
-              </ul>
-              <h5>Disadvantages</h5>
-              <ul>
-                <li>Has more built-in concepts to learn initially.</li>
-                <li>May be heavier than necessary for a tiny API.</li>
-              </ul>
-              <div class="best-for">
-                <strong>When to use</strong>
-                <p>Content platforms, e-learning websites, booking systems, and database-heavy applications.</p>
-              </div>
-            </article>
-
-            <article class="comparison-card flask-card">
-              <h4>🐘 LAMP Stack</h4>
-              <h5>Advantages</h5>
-              <ul>
-                <li>Uses widely available PHP and MySQL hosting.</li>
-                <li>Works well for traditional server-rendered websites.</li>
-                <li>Has a large ecosystem of tools and resources.</li>
-              </ul>
-              <h5>Disadvantages</h5>
-              <ul>
-                <li>Requires understanding PHP and server configuration.</li>
-                <li>Linux and Apache administration may add complexity.</li>
-              </ul>
-              <div class="best-for">
-                <strong>When to use</strong>
-                <p>PHP websites, content management systems, and traditional database-driven applications.</p>
-              </div>
-            </article>
-
-            <article class="comparison-card flask-card">
-              <h4>🐍 Python + Flask</h4>
-              <h5>Advantages</h5>
-              <ul>
-                <li>Lightweight and straightforward to start with.</li>
-                <li>Works well with Python and AI libraries.</li>
-                <li>Flexible for custom APIs and services.</li>
-              </ul>
-              <h5>Disadvantages</h5>
-              <ul>
-                <li>Often requires extra libraries for additional features.</li>
-                <li>Larger projects need deliberate organization.</li>
-              </ul>
-              <div class="best-for">
-                <strong>When to use</strong>
-                <p>AI integrations, small or medium web apps, and custom REST APIs.</p>
-              </div>
-            </article>
-
-            <article class="comparison-card express-card">
-              <h4>☕ Java Spring Boot</h4>
-              <h5>Advantages</h5>
-              <ul>
-                <li>Provides strong application structure and dependency injection.</li>
-                <li>Supports validation, security, and database integrations.</li>
-                <li>Suitable for complex, long-running business applications.</li>
-              </ul>
-              <h5>Disadvantages</h5>
-              <ul>
-                <li>Requires learning Java and its ecosystem.</li>
-                <li>Configuration and project structure can feel complex initially.</li>
-              </ul>
-              <div class="best-for">
-                <strong>When to use</strong>
-                <p>Enterprise systems, financial applications, and large business APIs.</p>
-              </div>
-            </article>
-
-          </div>
-
-          <p class="comparison-note">
-            These stacks are starting points, not strict rules. Choose according
-            to your project requirements, preferred language, and database needs.
-          </p>
-        </section>
-      </section>
+      <h1>Find the right technology stack for your idea</h1>
+      <p>Describe the website or application you want to build. AI will analyse its requirements and recommend a suitable technology stack.</p>
     </section>
 
     <section class="idea-section">
@@ -238,61 +45,94 @@
         <span class="idea-icon">✧</span>
         <div>
           <h2>Describe your website idea</h2>
-          <p>Our AI will understand your idea and design a suitable backend folder structure.</p>
+          <p>Explain what the product should do, who will use it, and its important features.</p>
         </div>
       </div>
 
       <form id="ideaForm">
-        <label for="websiteIdea" class="input-label">
-          What do you want to build?
-        </label>
-
-        <textarea id="websiteIdea" name="websiteIdea" rows="4"
-          maxlength="3000" required
-          placeholder="Describe your website idea and its main features..."></textarea>
+        <label for="websiteIdea" class="input-label">What do you want to build?</label>
+        <textarea id="websiteIdea" name="websiteIdea" rows="5" maxlength="3000" required
+          placeholder="Example: I want to build an online learning platform where students can sign up, watch lessons, take quizzes, track progress, and purchase premium courses..."></textarea>
 
         <div class="input-footer">
-          <span>Describe the main purpose and features of your website.</span>
+          <span>Include the main features and any special requirements.</span>
           <span id="characterCount">0 / 3000</span>
         </div>
 
-        <button type="submit" id="generateButton" class="generate-button">
+        <button type="submit" id="recommendButton" class="generate-button">
           <span>✧</span>
-          <span id="buttonText">Generate Folder Structure</span>
+          <span id="buttonText">Recommend a Technology Stack</span>
           <span class="button-arrow">→</span>
         </button>
 
-        <p class="privacy-note">
-          The AI generates a folder plan only. It does not create or execute code.
-        </p>
-
+        <p class="privacy-note">Phase 2 only recommends a technology stack. It does not generate folders or create code. Your Phase 3 full-project generator remains separate.</p>
         <p id="errorMessage" class="error-message" role="alert" hidden></p>
       </form>
     </section>
 
-    <section id="resultSection" class="panel result-panel" hidden>
+    <section id="resultSection" class="panel result-panel" hidden aria-live="polite">
       <div class="panel-heading">
         <div class="heading-icon">✨</div>
         <div class="heading-text">
-          <h2>Your generated folder structure</h2>
-          <p id="resultSummary">Customized for your website idea.</p>
+          <h2 id="recommendedStackTitle">Recommended technology stack</h2>
+          <p id="resultSummary">Your recommendation will appear here.</p>
         </div>
-        <span class="ai-badge">AI generated</span>
+        <span class="ai-badge">AI recommendation</span>
       </div>
 
-      <div id="generatedTree" class="folder-tree"></div>
+      <div id="recommendationContent">
+        <article class="recommendation-primary">
+          <p class="recommendation-eyebrow">BEST MATCH FOR YOUR IDEA</p>
+          <h3 id="stackName">—</h3>
+          <p id="stackFullName">—</p>
+          <p id="whyRecommended">—</p>
+        </article>
 
-      <div class="result-footer">
-        <button type="button" id="copyButton" class="secondary-button">
-          Copy folder structure
-        </button>
-        <span id="copyStatus" role="status"></span>
+        <div class="recommendation-grid">
+          <article class="recommendation-card">
+            <h3>Frontend</h3>
+            <p id="frontendTechnology">—</p>
+          </article>
+          <article class="recommendation-card">
+            <h3>Backend</h3>
+            <p id="backendTechnology">—</p>
+          </article>
+          <article class="recommendation-card">
+            <h3>Database</h3>
+            <p id="databaseTechnology">—</p>
+            <p id="databaseReason" class="recommendation-muted"></p>
+          </article>
+          <article class="recommendation-card">
+            <h3>Project complexity</h3>
+            <p id="complexityLevel">—</p>
+          </article>
+        </div>
+
+        <div class="recommendation-columns">
+          <article class="recommendation-card">
+            <h3>Why this stack fits</h3>
+            <ul id="strengthsList"></ul>
+          </article>
+          <article class="recommendation-card">
+            <h3>Trade-offs to understand</h3>
+            <ul id="tradeoffsList"></ul>
+          </article>
+        </div>
+
+        <article class="recommendation-alternative">
+          <h3>Alternative worth considering</h3>
+          <strong id="alternativeStackName">—</strong>
+          <p id="alternativeReason">—</p>
+        </article>
+
+        <article class="recommendation-next-steps">
+          <h3>Suggested next steps</h3>
+          <ol id="nextStepsList"></ol>
+        </article>
       </div>
     </section>
 
-    <footer class="page-footer">
-      ✦ AI Code Platform · Phase 2 — Backend Structure Generator
-    </footer>
+    <footer class="page-footer">✦ AI Code Platform · Phase 2 — Technology Stack Advisor</footer>
   </main>
 </body>
 </html>
