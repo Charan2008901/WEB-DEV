@@ -82,9 +82,10 @@ def get_db_connection():
             raise ValueError("SSL CA certificate file is empty.")
 
         connection_options.update({
-            "ssl_ca": str(ca_path),
-            "ssl_verify_cert": True,
+            "ssl_ca": ssl_ca,
+            "ssl_verify_cert": False,
             "ssl_verify_identity": True,
+            "ssl_disabled":False
         })
 
     else:
