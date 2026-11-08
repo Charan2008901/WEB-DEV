@@ -26,12 +26,16 @@ app = Flask(__name__)
 CORS(
     app,
     resources={
-        r"/api/*": {
+        r"/api/.*": {
             "origins": [
                 "https://web-dev-zikd.onrender.com"
-            ]
+            ],
+            "methods": ["GET", "POST", "OPTIONS"],
+            "allow_headers": ["Content-Type", "Authorization"],
+            "max_age": 600,
         }
-    }
+    },
+    supports_credentials=False,
 )
 
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
