@@ -5,22 +5,29 @@ Run in production with a threaded worker (Gemini calls are I/O-bound):
     gunicorn app:app -k gthread -w 2 --threads 8 --timeout 120
 
 Environment variables:
-    GOOGLE_CLIENT_ID, GEMINI_API_KEY      required
+    GOOGLE_CLIENT_ID, GEMINI_API_KEY      required (additional Gemini keys optional)
+    GEMINI_API_KEY_2 / GEMINI_API_KEY2    optional second key
+    GEMINI_API_KEY_3 / GEMINI_API_KEY3    optional third key
     REDIS_URL                             strongly recommended in production
-    GEMINI_MODEL                          default gemini-3.8-flash
+    GEMINI_MODEL                          Phase 3 primary (default gemini-3.8-flash)
+    GEMINI_STRUCTURE_FALLBACK_MODEL       Phase 3 fallback (default gemini-3.6-flash)
+    GEMINI_STRUCTURE_MAX_OUTPUT_TOKENS    Phase 3 output cap (default 5000)
     GEMINI_FAST_MODEL                     Phase 2 primary (default gemini-3.5-flash-lite)
-    GEMINI_FAST_FALLBACK_MODEL            Phase 2 fallback (default gemini-3.5-flash)
+    GEMINI_FAST_FALLBACK_MODEL            Phase 2 fallback (default GEMINI_MODEL)
     GEMINI_BRIEF_MODEL                    default gemini-3.5-flash-lite for Phase 1
-    GEMINI_BRIEF_TIMEOUT_SECONDS          default 30; one attempt for Phase 1
+    GEMINI_BRIEF_TIMEOUT_SECONDS          default 25; one attempt for Phase 1
     GEMINI_BRIEF_THINKING_LEVEL           default minimal for Phase 1
-    GEMINI_FAST_THINKING_LEVEL            low / medium / high (default low)
-    GEMINI_THINKING_LEVEL                 low / medium / high (default medium)
+    GEMINI_FAST_THINKING_LEVEL            default minimal for Phase 2
+    GEMINI_THINKING_LEVEL                 default low for Phase 3
     GEMINI_FAST_TIMEOUT_SECONDS           Phase 2 primary timeout (default 18)
     GEMINI_FAST_FALLBACK_TIMEOUT_SECONDS  Phase 2 fallback timeout (default 22)
-    GEMINI_TIMEOUT_SECONDS                per-attempt timeout for Phase 3 (default 45)
+    GEMINI_TIMEOUT_SECONDS                per-attempt timeout for Phase 3 (default 50)
     TRUSTED_PROXY_COUNT                   proxy hops in front of the app (Render: 1)
     CORS_ORIGINS                          comma-separated allowed origins
-    DAILY_USER_LIMIT / DAILY_ANON_LIMIT   default 20 / 20
+    DAILY_USER_LIMIT / DAILY_ANON_LIMIT   overall daily caps (default 8 / 8)
+    PHASE1_DAILY_USER_LIMIT               Phase 1 cap (default 5)
+    PHASE2_DAILY_USER_LIMIT               Phase 2 cap (default 3)
+    PHASE3_DAILY_USER_LIMIT               Phase 3 cap (default 2)
 
 For Gemini 3.x, this file uses thinking_level and omits deprecated sampling
 parameters. Legacy thinking-budget variables are retained only for older models.
@@ -67,19 +74,60 @@ except ImportError:  # pragma: no cover
 # --------------------------------------------------
 
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+
+
+def _load_gemini_api_keys():
+    """Load distinct Gemini keys, accepting both Render naming conventions.
+
+    Supported names: GEMINI_API_KEY, GEMINI_API_KEY_2 / GEMINI_API_KEY2,
+    GEMINI_API_KEY_3 / GEMINI_API_KEY3, and optional comma-separated
+    GEMINI_API_KEYS. Keys are never logged. Keys belonging to one Google
+    project still share that project's model quotas.
+    """
+    candidates = [
+        os.getenv("GEMINI_API_KEY"),
+        os.getenv("GEMINI_API_KEY_2"),
+        os.getenv("GEMINI_API_KEY2"),
+        os.getenv("GEMINI_API_KEY_3"),
+        os.getenv("GEMINI_API_KEY3"),
+    ]
+    candidates.extend(os.getenv("GEMINI_API_KEYS", "").split(","))
+    result = []
+    seen = set()
+    for candidate in candidates:
+        value = (candidate or "").strip()
+        if value and value not in seen:
+            seen.add(value)
+            result.append(value)
+    return tuple(result)
+
+
+GEMINI_API_KEYS = _load_gemini_api_keys()
+GEMINI_API_KEY = GEMINI_API_KEYS[0] if GEMINI_API_KEYS else None
+
+# Phase 3 uses the full Flash model for the larger structured folder output.
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
-# Phase 2 is a compact structured-output task. Keep it off the slower default
-# model and use a separate stable fallback if the primary model is unavailable.
+GEMINI_THINKING_LEVEL = None  # assigned through _read_thinking_level below
+GEMINI_STRUCTURE_FALLBACK_MODEL = os.getenv(
+    "GEMINI_STRUCTURE_FALLBACK_MODEL", "gemini-3.6-flash"
+).strip()
+GEMINI_STRUCTURE_MAX_OUTPUT_TOKENS = max(
+    2500, min(6000, int(os.getenv("GEMINI_STRUCTURE_MAX_OUTPUT_TOKENS", "5000")))
+)
+GEMINI_STRUCTURE_FALLBACK_TIMEOUT_MS = int(
+    float(os.getenv("GEMINI_STRUCTURE_FALLBACK_TIMEOUT_SECONDS", "40")) * 1000
+)
+
+# Phase 2: low-latency Flash-Lite first, full Flash only as a fallback.
 GEMINI_FAST_MODEL = os.getenv("GEMINI_FAST_MODEL", "gemini-3.5-flash-lite")
 GEMINI_FAST_FALLBACK_MODEL = os.getenv(
-    "GEMINI_FAST_FALLBACK_MODEL", "gemini-3.5-flash"
+    "GEMINI_FAST_FALLBACK_MODEL", GEMINI_MODEL
 )
-# Phase 1 is a short writing task: use Google's low-latency Flash-Lite model.
-# This is deliberately separate so Phase 2 and Phase 3 keep their current models.
+
+# Phase 1: short project brief, so use Flash-Lite and one bounded attempt.
 GEMINI_BRIEF_MODEL = os.getenv("GEMINI_BRIEF_MODEL", "gemini-3.5-flash-lite")
 GEMINI_BRIEF_TIMEOUT_MS = int(
-    float(os.getenv("GEMINI_BRIEF_TIMEOUT_SECONDS", "30")) * 1000
+    float(os.getenv("GEMINI_BRIEF_TIMEOUT_SECONDS", "25")) * 1000
 )
 
 _VALID_THINKING_LEVELS = {"minimal", "low", "medium", "high"}
@@ -108,7 +156,10 @@ GEMINI_FAST_FALLBACK_THINKING_LEVEL = _read_thinking_level(
     "GEMINI_FAST_FALLBACK_THINKING_LEVEL", "minimal"
 )
 GEMINI_THINKING_LEVEL = _read_thinking_level(
-    "GEMINI_THINKING_LEVEL", "medium"
+    "GEMINI_THINKING_LEVEL", "low"
+)
+GEMINI_STRUCTURE_FALLBACK_THINKING_LEVEL = _read_thinking_level(
+    "GEMINI_STRUCTURE_FALLBACK_THINKING_LEVEL", "low"
 )
 
 # Per-attempt HTTP timeouts. Fast tasks get a shorter budget; Phase 3 has
@@ -120,7 +171,7 @@ GEMINI_FAST_FALLBACK_TIMEOUT_MS = int(
     float(os.getenv("GEMINI_FAST_FALLBACK_TIMEOUT_SECONDS", "22")) * 1000
 )
 GEMINI_TIMEOUT_MS = int(
-    float(os.getenv("GEMINI_TIMEOUT_SECONDS", "45")) * 1000
+    float(os.getenv("GEMINI_TIMEOUT_SECONDS", "50")) * 1000
 )
 
 # Backward compatibility for older Gemini models (e.g. Gemini 2.5).
@@ -140,15 +191,35 @@ GEMINI_THINKING_BUDGET = (
 
 REDIS_URL = os.getenv("REDIS_URL")
 TRUSTED_PROXY_COUNT = int(os.getenv("TRUSTED_PROXY_COUNT", "1"))
-DAILY_USER_LIMIT = int(os.getenv("DAILY_USER_LIMIT", "20"))
-DAILY_ANON_LIMIT = int(os.getenv("DAILY_ANON_LIMIT", "20"))
+# Shared overall daily caps: the sum of the three phase limits is 10,
+# while the global cap is 8, so one account cannot consume unlimited calls
+# by switching between phases. Cached responses do not consume quota.
+DAILY_USER_LIMIT = int(os.getenv("DAILY_USER_LIMIT", "8"))
+DAILY_ANON_LIMIT = int(os.getenv("DAILY_ANON_LIMIT", "8"))
+PHASE_DAILY_LIMITS = {
+    "phase1": {
+        "user": int(os.getenv("PHASE1_DAILY_USER_LIMIT", "5")),
+        "anonymous": int(os.getenv("PHASE1_DAILY_ANON_LIMIT", "5")),
+        "label": "Phase 1",
+    },
+    "phase2": {
+        "user": int(os.getenv("PHASE2_DAILY_USER_LIMIT", "3")),
+        "anonymous": int(os.getenv("PHASE2_DAILY_ANON_LIMIT", "3")),
+        "label": "Phase 2",
+    },
+    "phase3": {
+        "user": int(os.getenv("PHASE3_DAILY_USER_LIMIT", "2")),
+        "anonymous": int(os.getenv("PHASE3_DAILY_ANON_LIMIT", "2")),
+        "label": "Phase 3",
+    },
+}
 
 MAX_TOKEN_LENGTH = 4096
-MAX_ENTRIES = 60
+MAX_ENTRIES = 35
 MAX_DEPTH = 10
 CLOCK_SKEW_SECONDS = 10
 CACHE_TTL_SECONDS = 86400
-PROMPT_VERSION = "v3"
+PROMPT_VERSION = "v4"
 
 CORS_ORIGINS = [
     o.strip()
@@ -941,7 +1012,7 @@ FOLDER_SCHEMA = {
         "project_summary": {"type": "string"},
         "folders": {
             "type": "array",
-            "maxItems": 50,
+            "maxItems": 35,
             "items": {
                 "type": "object",
                 "properties": {
@@ -1053,20 +1124,91 @@ class AIOutputError(Exception):
 
 _clients = {}
 _client_lock = threading.Lock()
+_api_key_cursor = 0
 
 
-def get_client(timeout_ms=GEMINI_TIMEOUT_MS):
-    """Return a shared Gemini client configured for this request timeout."""
-    timeout_ms = int(timeout_ms or GEMINI_TIMEOUT_MS)
+def _ordered_gemini_api_keys():
+    """Return a round-robin ordering of configured keys without exposing them."""
+    global _api_key_cursor
+    if not GEMINI_API_KEYS:
+        return ()
     with _client_lock:
-        client = _clients.get(timeout_ms)
+        start = _api_key_cursor % len(GEMINI_API_KEYS)
+        _api_key_cursor = (_api_key_cursor + 1) % len(GEMINI_API_KEYS)
+    return GEMINI_API_KEYS[start:] + GEMINI_API_KEYS[:start]
+
+
+def get_client(timeout_ms=GEMINI_TIMEOUT_MS, api_key=None):
+    """Return a cached Gemini client for a timeout and a specific API key."""
+    timeout_ms = int(timeout_ms or GEMINI_TIMEOUT_MS)
+    api_key = api_key or GEMINI_API_KEY
+    if not api_key:
+        raise RuntimeError("No Gemini API key is configured.")
+    # Fingerprint the key for the local cache identifier; never log the secret.
+    key_fingerprint = hashlib.sha256(api_key.encode("utf-8")).hexdigest()[:16]
+    cache_key = (timeout_ms, key_fingerprint)
+    with _client_lock:
+        client = _clients.get(cache_key)
         if client is None:
             client = genai.Client(
-                api_key=GEMINI_API_KEY,
+                api_key=api_key,
                 http_options=genai.types.HttpOptions(timeout=timeout_ms),
             )
-            _clients[timeout_ms] = client
+            _clients[cache_key] = client
         return client
+
+
+def _api_error_code(exc):
+    """Return a numeric Gemini API status code when available."""
+    raw_code = getattr(exc, "code", None)
+    try:
+        return int(raw_code)
+    except (TypeError, ValueError):
+        return None
+
+
+def _is_invalid_api_key_error(exc):
+    """Only rotate keys for an explicitly rejected key, never for quota errors."""
+    code = _api_error_code(exc)
+    detail = str(exc).lower()
+    explicit_invalid_key = any(token in detail for token in (
+        "api_key_invalid", "api key not valid", "invalid api key",
+        "api key is invalid", "invalid authentication credentials",
+    ))
+    return code == 401 or (code in (400, 403) and explicit_invalid_key)
+
+
+def _generate_content_with_key_rotation(model, contents, config, timeout_ms):
+    """Use configured keys round-robin; rotate only if a key itself is rejected.
+
+    A 429 quota/rate error is NOT retried with another key because keys in the
+    same Google AI project share project/model quotas.
+    """
+    keys = _ordered_gemini_api_keys()
+    if not keys:
+        raise RuntimeError("No Gemini API key is configured.")
+
+    last_error = None
+    for index, api_key in enumerate(keys):
+        try:
+            return get_client(timeout_ms, api_key).models.generate_content(
+                model=model,
+                contents=contents,
+                config=config,
+            )
+        except genai_errors.APIError as exc:
+            if not _is_invalid_api_key_error(exc) or index == len(keys) - 1:
+                raise
+            last_error = exc
+            app.logger.warning(
+                "Gemini rejected configured API key slot %d; trying another configured key. "
+                "API keys do not provide separate project quotas.",
+                index + 1,
+            )
+
+    if last_error:
+        raise last_error
+    raise RuntimeError("No usable Gemini API key is configured.")
 
 
 def _is_gemini_3_model(model):
@@ -1118,9 +1260,8 @@ def generate_json(
 ):
     """Call Gemini and validate the result with a bounded retry policy.
 
-    The caller controls the attempt count. Phase 1 uses one attempt because a
-    repeated deadline-exceeded request only doubles latency; the existing
-    Phase 2/3 retry policy remains unchanged.
+    The caller controls the attempt count. All three phases use bounded attempts;
+    model fallback is a separate, single request to a different model.
     """
     last_error = None
     model = model or GEMINI_MODEL
@@ -1140,10 +1281,8 @@ def generate_json(
                 active_level, active_budget,
             )
             try:
-                response = get_client(timeout_ms).models.generate_content(
-                    model=model,
-                    contents=prompt,
-                    config=config,
+                response = _generate_content_with_key_rotation(
+                    model, prompt, config, timeout_ms
                 )
             except genai_errors.APIError as exc:
                 # If the API rejects a thinking setting, retry this attempt
@@ -1158,10 +1297,8 @@ def generate_json(
                     config = _gen_config(
                         schema, temperature, max_tokens, model, None, None
                     )
-                    response = get_client(timeout_ms).models.generate_content(
-                        model=model,
-                        contents=prompt,
-                        config=config,
+                    response = _generate_content_with_key_rotation(
+                        model, prompt, config, timeout_ms
                     )
                 else:
                     raise
@@ -1212,15 +1349,6 @@ def generate_json(
     raise last_error
 
 
-def _api_error_code(exc):
-    """Return a numeric Gemini API status code when available."""
-    raw_code = getattr(exc, "code", None)
-    try:
-        return int(raw_code)
-    except (TypeError, ValueError):
-        return None
-
-
 def generate_json_with_fallback(
     prompt,
     schema,
@@ -1233,8 +1361,9 @@ def generate_json_with_fallback(
     fallback_thinking_level,
     primary_timeout_ms,
     fallback_timeout_ms,
+    label="generation",
 ):
-    """Try one fast primary call, then one alternate model for transient failures.
+    """Try one primary call, then one alternate model for transient failures.
 
     Avoids repeating the same slow model call. Fallback is limited to API
     capacity/rate/deadline failures and client timeouts; configuration errors
@@ -1260,13 +1389,14 @@ def generate_json_with_fallback(
             raise
         if not fallback_model or fallback_model == primary_model:
             app.logger.error(
-                "Phase 2 fallback skipped: fallback model is missing or equals primary model."
+                "%s fallback skipped: fallback model is missing or equals primary model.", label
             )
             raise
 
         app.logger.warning(
-            "Phase 2 primary model failed: model=%s upstream_status=%s; "
+            "%s primary model failed: model=%s upstream_status=%s; "
             "trying fallback model=%s once.",
+            label,
             primary_model,
             primary_code if primary_code is not None else type(primary_error).__name__,
             fallback_model,
@@ -1282,14 +1412,16 @@ def generate_json_with_fallback(
                 max_attempts=1,
             )
             app.logger.info(
-                "Phase 2 recommendation succeeded using fallback model=%s.",
+                "%s succeeded using fallback model=%s.",
+                label,
                 fallback_model,
             )
             return result
         except Exception as fallback_error:
             app.logger.exception(
-                "Phase 2 fallback model failed: primary_model=%s fallback_model=%s "
+                "%s fallback model failed: primary_model=%s fallback_model=%s "
                 "fallback_status=%s",
+                label,
                 primary_model,
                 fallback_model,
                 _api_error_code(fallback_error)
@@ -1299,28 +1431,63 @@ def generate_json_with_fallback(
             raise fallback_error
 
 
-def quota_for(auth):
+def _quota_identity(auth):
     if auth.state == "valid":
-        return f"quota:user:{auth.google_id}", DAILY_USER_LIMIT
-    return f"quota:ip:{get_remote_address()}", DAILY_ANON_LIMIT
+        return "user", str(auth.google_id)
+    return "anonymous", str(get_remote_address())
+
+
+def quota_for(auth):
+    """Return the shared overall daily quota key and limit."""
+    identity_type, identity = _quota_identity(auth)
+    limit = DAILY_USER_LIMIT if identity_type == "user" else DAILY_ANON_LIMIT
+    return f"quota:v2:global:{identity_type}:{identity}", limit
+
+
+def phase_quota_for(auth, phase):
+    """Return the independent daily cap for one phase and identity."""
+    if phase not in PHASE_DAILY_LIMITS:
+        raise ValueError(f"Unknown generation phase: {phase}")
+    identity_type, identity = _quota_identity(auth)
+    limits = PHASE_DAILY_LIMITS[phase]
+    limit = limits["user"] if identity_type == "user" else limits["anonymous"]
+    return f"quota:v2:{phase}:{identity_type}:{identity}", limit, limits["label"]
 
 
 def run_generation(auth, prompt, schema, temperature, max_tokens, validate,
                    cache_key=None, label="result", model=None,
                    thinking_level=None, thinking_budget=None,
-                   timeout_ms=None, max_attempts=2,
+                   timeout_ms=None, max_attempts=1,
                    fallback_model=None, fallback_thinking_level=None,
-                   fallback_timeout_ms=None):
-    """Reserve quota -> call Gemini -> refund quota if anything fails."""
-    if not GEMINI_API_KEY:
-        app.logger.error("GEMINI_API_KEY is not configured.")
-        return jsonify({"error": "The AI service is not configured."}), 503
+                   fallback_timeout_ms=None, phase="phase1"):
+    """Reserve global + phase quota, call Gemini, and refund on failure.
 
-    quota_key, limit = quota_for(auth)
-    store = quotas.reserve(quota_key, limit)
-    if not store:
+    Endpoints check cache before calling this function, so cache hits consume
+    neither global nor phase quota.
+    """
+    if not GEMINI_API_KEYS:
+        app.logger.error("No Gemini API key is configured.")
+        return jsonify({"error": "The AI service is not configured. Add GEMINI_API_KEY in Render."}), 503
+
+    global_quota_key, global_limit = quota_for(auth)
+    global_store = quotas.reserve(global_quota_key, global_limit)
+    if not global_store:
         return jsonify({
-            "error": f"Daily AI generation limit reached. You can make up to {limit} generations per 24 hours."
+            "error": (
+                f"Your overall daily AI limit has been reached ({global_limit} successful generations per 24 hours). "
+                "Cached results remain available. Please try again after the quota window resets."
+            )
+        }), 429
+
+    phase_key, phase_limit, phase_label = phase_quota_for(auth, phase)
+    phase_store = quotas.reserve(phase_key, phase_limit)
+    if not phase_store:
+        quotas.refund(global_quota_key, global_store)
+        return jsonify({
+            "error": (
+                f"{phase_label} daily limit reached ({phase_limit} successful generations per 24 hours). "
+                "You can still use the other phases within your overall daily limit."
+            )
         }), 429
 
     succeeded = False
@@ -1334,6 +1501,7 @@ def run_generation(auth, prompt, schema, temperature, max_tokens, validate,
                 fallback_thinking_level=fallback_thinking_level,
                 primary_timeout_ms=timeout_ms,
                 fallback_timeout_ms=fallback_timeout_ms,
+                label=label,
             )
         else:
             result = generate_json(
@@ -1354,78 +1522,78 @@ def run_generation(auth, prompt, schema, temperature, max_tokens, validate,
             "error": f"The AI request timed out while generating the {label}. Please try again."
         }), 504
     except genai_errors.APIError as exc:
-        raw_code = getattr(exc, "code", None)
-        try:
-            code = int(raw_code)
-        except (TypeError, ValueError):
-            code = None
-
-        # Log the model and upstream status so Render logs reveal the real
-        # Gemini failure, without logging the user's project idea or API key.
+        code = _api_error_code(exc)
+        detail = str(exc).lower()
         app.logger.error(
-            "Gemini API failure: task=%s model=%s fallback_model=%s "
+            "Gemini API failure: task=%s phase=%s primary_model=%s fallback_model=%s "
             "upstream_status=%s detail=%s",
-            label,
-            model or GEMINI_MODEL,
+            label, phase, model or GEMINI_MODEL,
             fallback_model or "not-configured",
             code if code is not None else "unknown",
             str(exc)[:500],
         )
 
-        if code == 604 or "604 DEADLINE_EXCEEDED" in str(exc):
+        if code == 604 or "604 deadline_exceeded" in detail or "deadline_exceeded" in detail:
             return jsonify({
-                "error": f"Gemini timed out while generating the {label}. Please try again."
+                "error": f"Gemini timed out while generating the {label}. Please retry; your generation quota was not consumed."
             }), 504
 
         if code == 429:
-            return jsonify({
-                "error": (
-                    "Gemini API rate limit or quota reached (HTTP 429). "
-                    "Wait before retrying, then check the Gemini API quota for your key."
+            is_daily = any(term in detail for term in (
+                "free_tier_requests", "requests per day", "per day limit",
+                "daily quota", "quota exceeded",
+            ))
+            if is_daily:
+                message = (
+                    "Gemini's daily quota for the configured model has been exhausted. "
+                    "All API keys in the same Google AI project share that quota. "
+                    "Wait for the model quota window to reset or configure another model with available quota."
                 )
-            }), 429
+            else:
+                message = (
+                    "Gemini rate limit reached. Please wait before trying again. "
+                    "Switching API keys in the same Google AI project does not increase this quota."
+                )
+            return jsonify({"error": message}), 429
 
-        if code == 503:
+        if code in (500, 502, 503):
             return jsonify({
-                "error": (
-                    "Gemini is temporarily overloaded or unavailable (HTTP 503). "
-                    "Please retry shortly."
-                )
+                "error": "Gemini is temporarily unavailable or overloaded. Please retry shortly."
             }), 503
 
-        if code in (401, 403):
+        if code in (400, 401, 403):
             return jsonify({
                 "error": (
-                    "Gemini rejected the API key or access to the configured model. "
-                    "Check the GEMINI_API_KEY and model access in Render."
+                    "Gemini rejected the configured API key or model access. Check all GEMINI_API_KEY variables "
+                    "and verify that the selected model is enabled for this Google AI project."
                 )
             }), 502
 
         if code == 404:
             return jsonify({
                 "error": (
-                    f"The configured Gemini model '{model or GEMINI_MODEL}' was not found. "
-                    "Check GEMINI_FAST_MODEL / GEMINI_MODEL in Render."
+                    f"The configured Gemini model '{model or GEMINI_MODEL}' was not found or is unavailable "
+                    "to this project. Check the phase-specific model environment variables in Render."
                 )
             }), 502
 
         return jsonify({
             "error": (
                 f"Gemini could not generate the {label} "
-                f"(upstream status {code if code is not None else 'unknown'}). "
-                "Check the backend logs for details."
+                f"(upstream status {code if code is not None else 'unknown'}). Check the backend logs for details."
             )
         }), 502
     except Exception as exc:
         app.logger.exception("Unexpected error while generating %s", label)
-        if "604 DEADLINE_EXCEEDED" in str(exc):
+        if "604 DEADLINE_EXCEEDED" in str(exc) or "deadline_exceeded" in str(exc).lower():
             return jsonify({
-                "error": f"Gemini took too long to generate the {label}. Please try again."
+                "error": f"Gemini took too long to generate the {label}. Please retry."
             }), 504
         return jsonify({"error": f"The AI could not generate the {label}. Please try again."}), 502
     finally:
         if not succeeded:
-            quotas.refund(quota_key, store)
+            quotas.refund(phase_key, phase_store)
+            quotas.refund(global_quota_key, global_store)
 
     if cache_key:
         cache_set(cache_key, result)
@@ -1516,6 +1684,7 @@ def generate_project_brief():
         thinking_budget=None,
         timeout_ms=GEMINI_BRIEF_TIMEOUT_MS,
         max_attempts=1,
+        phase="phase1",
     )
 
 
@@ -1692,6 +1861,7 @@ def recommend_stack():
     cache_key = make_cache_key(
         "recommend-requirements-first-v1",
         GEMINI_FAST_MODEL,
+        GEMINI_FAST_FALLBACK_MODEL,
         normalize_idea(idea),
     )
     cached = cache_get(cache_key)
@@ -1731,6 +1901,7 @@ def recommend_stack():
         fallback_model=GEMINI_FAST_FALLBACK_MODEL,
         fallback_thinking_level=GEMINI_FAST_FALLBACK_THINKING_LEVEL,
         fallback_timeout_ms=GEMINI_FAST_FALLBACK_TIMEOUT_MS,
+        phase="phase2",
     )
 
 
@@ -1902,7 +2073,10 @@ def generate_folder_structure():
         return jsonify({"error": "Phase 3 is available to Premium users only."}), 403
 
     # --- Cache (free, so served before quota) ---
-    cache_key = make_cache_key("structure", GEMINI_MODEL, framework, database, normalize_idea(idea))
+    cache_key = make_cache_key(
+        "structure-v2", GEMINI_MODEL, GEMINI_STRUCTURE_FALLBACK_MODEL,
+        framework, database, normalize_idea(idea)
+    )
     cached = cache_get(cache_key)
     if cached is not None:
         return jsonify(cached), 200
@@ -1940,12 +2114,18 @@ def generate_folder_structure():
 
     return run_generation(
         auth, prompt, FOLDER_SCHEMA,
-        temperature=0.2, max_tokens=8000,
+        temperature=None, max_tokens=GEMINI_STRUCTURE_MAX_OUTPUT_TOKENS,
         validate=validate, cache_key=cache_key,
         label="folder structure",
+        model=GEMINI_MODEL,
         thinking_level=GEMINI_THINKING_LEVEL,
-        thinking_budget=GEMINI_THINKING_BUDGET,
+        thinking_budget=None,
         timeout_ms=GEMINI_TIMEOUT_MS,
+        max_attempts=1,
+        fallback_model=GEMINI_STRUCTURE_FALLBACK_MODEL,
+        fallback_thinking_level=GEMINI_STRUCTURE_FALLBACK_THINKING_LEVEL,
+        fallback_timeout_ms=GEMINI_STRUCTURE_FALLBACK_TIMEOUT_MS,
+        phase="phase3",
     )
 
 
