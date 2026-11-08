@@ -1028,3 +1028,314 @@ html.js .reveal.is-visible {
   }
 }
 
+
+
+
+
+/* =====================================================================
+   WEB / LAB — PHASE 01
+   CONSOLIDATED CREAM / INK / BURNT ORANGE GLASSMORPHISM
+   Presentation-only layer: HTML structure, copy, layout rules and JS stay intact.
+   ===================================================================== */
+:root {
+  color-scheme: light;
+  --bg: #F3EEE3;
+  --panel: rgba(255, 255, 255, .42);
+  --surface-muted: rgba(255, 255, 255, .52);
+  --text: #111111;
+  --heading: #111111;
+  --muted: rgba(17, 17, 17, .68);
+  --line: rgba(17, 17, 17, .12);
+  --line-strong: rgba(17, 17, 17, .22);
+  --primary: #D9541E;
+  --primary-hover: #C44919;
+  --primary-shadow: rgba(111, 43, 17, .24);
+  --accent: #D9541E;
+  --accent-soft: rgba(217, 84, 30, .10);
+  --code-bg: rgba(17, 17, 17, .055);
+  --soft-shadow: rgba(45, 31, 19, .08);
+  --deep-shadow: rgba(45, 31, 19, .14);
+  --glass-fill: rgba(255, 255, 255, .34);
+  --glass-fill-strong: rgba(255, 255, 255, .54);
+  --glass-fill-soft: rgba(255, 255, 255, .24);
+  --glass-edge: rgba(255, 255, 255, .78);
+  --glass-highlight: rgba(255, 255, 255, .92);
+  --glass-shadow: 0 18px 42px rgba(54, 39, 24, .085);
+}
+
+html, body { color: var(--text); background-color: var(--bg); }
+html { background: var(--bg); }
+body {
+  background:
+    radial-gradient(ellipse at 8% 5%, rgba(255,255,255,.68), transparent 34rem),
+    radial-gradient(ellipse at 92% 18%, rgba(217,84,30,.075), transparent 36rem),
+    radial-gradient(ellipse at 50% 82%, rgba(255,255,255,.44), transparent 42rem),
+    linear-gradient(135deg, #F3EEE3 0%, #F8F4EC 50%, #EEE7DA 100%);
+  background-attachment: fixed;
+}
+::selection { color: #FFFFFF; background: var(--primary); }
+a { color: var(--primary); }
+a:hover { color: var(--primary-hover); }
+:focus-visible { outline-color: var(--primary); }
+
+/* The common glass material: translucent fill, thin bright rim, inner reflection. */
+.site-header,
+.intro-strip,
+.step-card,
+.prerequisite,
+.foundation-visual,
+.architecture-node,
+.concept-card,
+.stack-card,
+.stack-note,
+.workshop-panel,
+.brief-output,
+.finish-card,
+.finish-checklist,
+.final-reminder,
+.float-chip,
+.layer-toggle {
+  border-color: rgba(255,255,255,.72);
+  background: linear-gradient(135deg,
+    rgba(255,255,255,.62) 0%,
+    rgba(255,255,255,.34) 48%,
+    rgba(243,238,227,.38) 100%);
+  box-shadow: var(--glass-shadow),
+    inset 0 1px 0 var(--glass-highlight),
+    inset 0 -1px 0 rgba(17,17,17,.025);
+  -webkit-backdrop-filter: blur(17px) saturate(135%);
+  backdrop-filter: blur(17px) saturate(135%);
+}
+
+/* Header stays in its original position and dimensions. */
+.site-header {
+  border: 1px solid rgba(255,255,255,.82);
+  border-bottom-color: rgba(17,17,17,.09);
+  background: rgba(243,238,227,.76);
+  box-shadow: 0 10px 30px rgba(45,31,19,.075), inset 0 1px 0 #FFFFFF;
+}
+.brand, .brand-name { color: #111111; }
+.brand-name span { color: var(--primary); }
+.brand-mark {
+  color: #FFFFFF;
+  border-color: rgba(17,17,17,.10);
+  background: linear-gradient(145deg, #24211F, #111111);
+  box-shadow: 0 7px 16px rgba(17,17,17,.16), inset 0 1px 0 rgba(255,255,255,.18);
+}
+.nav-links { background: transparent; box-shadow: none; border: 0; -webkit-backdrop-filter: none; backdrop-filter: none; }
+.nav-links a { color: rgba(17,17,17,.70); }
+.nav-links a:hover, .nav-links a.is-current { color: var(--primary); }
+.nav-links a::after { background: var(--primary); }
+.menu-toggle { color: #111111; border-color: rgba(17,17,17,.13); background: rgba(255,255,255,.48); }
+.menu-toggle span { background: #111111; }
+.nav-cta, .button-primary {
+  color: #FFFFFF;
+  border-color: rgba(145,48,14,.22);
+  background: linear-gradient(145deg, #E36530, #D9541E);
+  box-shadow: 0 4px 0 rgba(111,43,17,.22), 0 10px 20px rgba(111,43,17,.12), inset 0 1px 0 rgba(255,255,255,.30);
+}
+.nav-cta:hover, .button-primary:hover {
+  color: #FFFFFF;
+  background: linear-gradient(145deg, #E87340, #C44919);
+  box-shadow: 0 6px 0 rgba(111,43,17,.20), 0 14px 24px rgba(111,43,17,.15);
+}
+
+/* Hero remains the same two-column composition; the backdrop supplies depth. */
+.hero {
+  color: #111111;
+  border-bottom-color: rgba(17,17,17,.09);
+  background:
+    radial-gradient(ellipse at 78% 34%, rgba(217,84,30,.075), transparent 33rem),
+    linear-gradient(115deg, rgba(255,255,255,.22), rgba(243,238,227,.18));
+}
+.hero-grid { opacity: .22; }
+.hero-glow, .scene-orbit, .architecture-orbit { border-color: rgba(217,84,30,.15); }
+.hero-glow-one, .orbit-one { box-shadow: inset 0 0 90px rgba(217,84,30,.035), 0 0 80px rgba(217,84,30,.03); }
+.scene-cross, .cross-two { color: rgba(17,17,17,.30); }
+.hero h1, .section h2, .hero-meta strong { color: #111111; }
+.hero h1 span, .hero h1 em, .section h2 span { color: var(--primary); }
+.hero-lead, .section-aside, .hero-meta span, .visual-note, .caption-top, .caption-bottom, .scroll-cue { color: rgba(17,17,17,.64); }
+.eyebrow, .section-kicker, .step-label, .stack-number, .form-heading,
+.brief-eyebrow, .visual-caption, .intro-strip-label, .caption-top,
+.footer-top, .step-question span, .stack-components span, .stack-uses > span,
+.stack-choice > span, .field-label span, .brief-result-grid dt,
+.checklist-top strong { color: var(--primary); }
+.eyebrow-line, .scroll-cue span { background: var(--primary); }
+.eyebrow-dot { color: var(--primary); }
+.text-link { color: #111111; }
+.text-link span, .caption-bottom span { color: var(--primary); }
+
+/* Keep the 3D browser illustration intact, but harmonize its internal palette. */
+.model-depth { border-color: rgba(17,17,17,.12); background: linear-gradient(145deg, rgba(255,255,255,.94), rgba(231,222,208,.88)); box-shadow: 0 22px 44px rgba(45,31,19,.14), inset 0 1px 0 #FFFFFF; }
+.browser-screen { border-color: rgba(255,255,255,.30); background: linear-gradient(145deg, #24211F, #111111); box-shadow: 0 26px 56px rgba(17,17,17,.20), inset 0 1px 0 rgba(255,255,255,.16); }
+.browser-screen::before { background: linear-gradient(90deg, #D9541E, #EF8A60, #D9541E); }
+.browser-topbar { background: rgba(243,238,227,.08); border-bottom-color: rgba(243,238,227,.15); }
+.browser-dots i, .browser-dots i:nth-child(2), .browser-dots i:nth-child(3) { background: #D9541E; opacity: .92; }
+.browser-address { color: #F3EEE3; background: rgba(243,238,227,.08); border-color: rgba(243,238,227,.20); }
+.browser-address span, .mock-topline { color: #EF8A60; }
+.mock-sidebar { border-right-color: rgba(243,238,227,.14); }
+.mock-brand, .mock-action { background: #D9541E; }
+.mock-title-line { background: #F3EEE3; }
+.mock-title-line.second { background: rgba(243,238,227,.72); }
+.mock-copy-line, .mock-nav, .mock-sidebar-foot { background: rgba(243,238,227,.24); }
+.mock-nav.active { border-color: rgba(217,84,30,.36); background: rgba(217,84,30,.18); }
+.mock-card-icon, .mock-card-icon.blue-icon { background: #D9541E; color: #FFFFFF; }
+.mock-card-icon.brown-icon { background: rgba(243,238,227,.24); color: #F3EEE3; }
+.mock-cards > div { border-color: rgba(243,238,227,.16); background: rgba(243,238,227,.075); }
+.mock-cards i, .mock-cards b { background: rgba(243,238,227,.28); }
+.screen-reflection { background: linear-gradient(125deg, rgba(255,255,255,.19), transparent 35% 70%, rgba(217,84,30,.035)); }
+.browser-base { border-color: rgba(17,17,17,.14); background: linear-gradient(180deg, #E9E0D4, #D8CCBC); }
+.float-chip { border-color: rgba(255,255,255,.84); background: rgba(255,255,255,.56); box-shadow: 0 12px 28px rgba(45,31,19,.10), inset 0 1px 0 #FFFFFF; }
+.float-chip b { color: #111111; }
+.float-chip small { color: rgba(17,17,17,.62); }
+.chip-symbol { color: #FFFFFF; background: var(--primary); }
+.chip-backend .chip-symbol { background: #24211F; }
+.chip-database .chip-symbol { background: #111111; }
+.float-node { border-color: var(--primary); background: var(--bg); box-shadow: 0 0 0 5px rgba(217,84,30,.08); }
+.layer-toggle { color: #111111; border-color: rgba(17,17,17,.12); background: rgba(255,255,255,.48); }
+.layer-toggle:hover { border-color: rgba(217,84,30,.45); background: rgba(255,255,255,.72); }
+.layer-toggle span { color: var(--primary); }
+
+/* Learning surfaces: distinct glass opacity gives hierarchy without changing geometry. */
+.intro-strip { border-bottom-color: rgba(17,17,17,.10); background: rgba(255,255,255,.26); }
+.intro-strip p, .step-card h3, .step-card > p, .step-question,
+.foundation-item h3, .concept-card h3, .concept-card small,
+.stack-card h3, .stack-diagram span, .stack-components b,
+.stack-choice p, .stack-note strong, .field-label,
+.brief-output h3, .brief-result-grid dd, .check-row { color: #111111; }
+.step-card, .concept-card, .stack-card {
+  border-color: rgba(255,255,255,.78);
+  background: linear-gradient(145deg, rgba(255,255,255,.60), rgba(255,255,255,.27) 62%, rgba(243,238,227,.40));
+  box-shadow: 0 14px 34px rgba(45,31,19,.075), inset 0 1px 0 rgba(255,255,255,.92), inset 0 -1px 0 rgba(17,17,17,.025);
+}
+.step-card:hover, .concept-card:hover, .stack-card:hover, .architecture-node:hover { border-color: rgba(217,84,30,.38); }
+.step-card::after { border-color: rgba(217,84,30,.09); box-shadow: 0 0 0 16px rgba(217,84,30,.018), 0 0 0 32px rgba(217,84,30,.01); }
+.step-mark, .tag-row span, .stack-diagram, .stack-choice, .foundation-item .foundation-index {
+  color: #111111; border-color: rgba(17,17,17,.10); background: rgba(255,255,255,.38);
+}
+.step-line { background: linear-gradient(90deg, var(--primary), rgba(17,17,17,.10)); }
+.step-question { border-top-color: rgba(17,17,17,.10); }
+.step-card-featured { border-color: rgba(17,17,17,.82); background: linear-gradient(145deg, rgba(38,35,32,.96), rgba(17,17,17,.94)); box-shadow: 0 18px 38px rgba(17,17,17,.16), inset 0 1px 0 rgba(255,255,255,.16); }
+.step-card-featured h3, .step-card-featured > p:not(.step-label), .step-card-featured .step-question { color: #F3EEE3; }
+.step-card-featured .step-number, .step-card-featured .step-label, .step-card-featured .step-question span { color: #F07844; }
+.step-card-featured .step-mark { color: #FFFFFF; border-color: rgba(255,255,255,.18); background: var(--primary); }
+.step-card-featured .step-question { border-top-color: rgba(243,238,227,.16); }
+.prerequisite { border-left: 3px solid var(--primary); background: rgba(255,255,255,.40); }
+.prerequisite strong { color: #111111; }
+.prerequisite p { color: rgba(17,17,17,.68); }
+.prerequisite-icon, .stack-note-icon { color: #FFFFFF; background: var(--primary); }
+.inline-arrow { color: var(--primary); }
+
+.foundation-visual { background: linear-gradient(145deg, rgba(255,255,255,.48), rgba(243,238,227,.25)); }
+.foundation-visual::before { background-image: linear-gradient(rgba(17,17,17,.035) 1px, transparent 1px), linear-gradient(90deg, rgba(17,17,17,.035) 1px, transparent 1px); }
+.architecture-node { color: #111111; border-color: rgba(255,255,255,.80); background: rgba(255,255,255,.48); }
+.architecture-node b, .architecture-connector span, .connector-two span { color: var(--primary); }
+.architecture-node small, .architecture-caption, .foundation-item p { color: rgba(17,17,17,.66); }
+.architecture-icon { background: var(--primary); }
+.server-node .architecture-icon { background: #24211F; }
+.database-node .architecture-icon { background: #111111; }
+.architecture-connector { border-left-color: var(--primary); }
+.connector-two { border-color: var(--primary); }
+.foundation-item { border-bottom-color: rgba(17,17,17,.10); }
+.foundation-footnote { color: rgba(17,17,17,.72); border-left-color: var(--primary); background: rgba(255,255,255,.36); }
+.foundation-footnote strong { color: #111111; }
+.concept-number { color: #FFFFFF; background: var(--primary); }
+.concept-card p { color: rgba(17,17,17,.67); }
+.section-stacks { border-color: rgba(17,17,17,.08); background: linear-gradient(180deg, rgba(255,255,255,.25), rgba(243,238,227,.10)); }
+.filter-button { color: rgba(17,17,17,.72); border-color: rgba(17,17,17,.13); background: rgba(255,255,255,.40); }
+.filter-button:hover { color: #111111; border-color: rgba(217,84,30,.40); background: rgba(255,255,255,.66); }
+.filter-button.is-active { color: #FFFFFF; border-color: var(--primary); background: var(--primary); box-shadow: 0 4px 12px rgba(111,43,17,.12); }
+.filter-button span { color: var(--primary); background: rgba(255,255,255,.72); }
+.filter-status { color: rgba(17,17,17,.62); }
+.stack-number, .stack-components span, .stack-uses > span, .stack-choice > span { color: var(--primary); }
+.stack-symbol, .symbol-mean, .symbol-django, .symbol-lamp, .symbol-flask, .symbol-spring { color: #FFFFFF; background: var(--primary); border-color: rgba(255,255,255,.36); box-shadow: 0 4px 0 rgba(111,43,17,.18); }
+.stack-tagline, .stack-uses p, .stack-note p { color: rgba(17,17,17,.68); }
+.stack-diagram { background: rgba(17,17,17,.045); }
+.stack-diagram i { color: var(--primary); }
+.stack-components > div { border-bottom-color: rgba(17,17,17,.09); }
+.stack-choice { border-color: rgba(255,255,255,.76); background: rgba(255,255,255,.36); }
+.stack-note { border-color: rgba(255,255,255,.76); background: rgba(255,255,255,.38); }
+
+/* Workshop controls: translucent fields with clear focus and readable values. */
+.workshop-intro > p { color: rgba(17,17,17,.70); }
+.workshop-panel { background: linear-gradient(145deg, rgba(255,255,255,.58), rgba(255,255,255,.28)); }
+.form-heading { color: var(--primary); border-bottom-color: rgba(17,17,17,.10); }
+.form-required { color: rgba(17,17,17,.58); }
+.field-label, .field-label span { color: #111111; }
+.field-label span { color: var(--primary); }
+.brief-form input, .brief-form textarea, input, textarea, select,
+.brief-field input, .brief-field textarea, .brief-field select {
+  color: #111111; border-color: rgba(17,17,17,.14);
+  background: rgba(255,255,255,.48);
+  box-shadow: inset 0 1px 3px rgba(17,17,17,.035);
+}
+.brief-form input::placeholder, .brief-form textarea::placeholder,
+input::placeholder, textarea::placeholder { color: rgba(17,17,17,.45); }
+.brief-form input:focus, .brief-form textarea:focus,
+input:focus-visible, textarea:focus-visible, select:focus-visible {
+  color: #111111; border-color: rgba(217,84,30,.72); background: rgba(255,255,255,.78);
+  box-shadow: 0 0 0 3px rgba(217,84,30,.12), inset 0 1px 3px rgba(17,17,17,.035);
+}
+.brief-output { color: #111111; border-color: rgba(255,255,255,.82); background: linear-gradient(145deg, rgba(255,255,255,.56), rgba(255,255,255,.30)); }
+.brief-output::before, .brief-output::after { border-color: rgba(217,84,30,.13); }
+.empty-blueprint { border-color: rgba(217,84,30,.34); background: rgba(255,255,255,.44); box-shadow: 0 10px 24px rgba(45,31,19,.06), inset 0 1px 0 #FFFFFF; }
+.blueprint-corner, .blueprint-mark { color: var(--primary); border-color: var(--primary); }
+.blueprint-lines i, .blueprint-lines i:nth-child(3) { background: rgba(217,84,30,.32); }
+.brief-empty-title, .brief-output h3, .brief-result-grid dd { color: #111111; }
+.brief-empty-copy, .brief-next { color: rgba(17,17,17,.66); }
+.brief-eyebrow, .brief-result-grid dt { color: var(--primary); }
+.brief-result-grid div { border-bottom-color: rgba(17,17,17,.09); }
+.brief-output.has-content { border-color: rgba(217,84,30,.34); }
+
+/* Finish panel is intentionally ink-dark to create a strong final anchor. */
+.finish-card { color: #F3EEE3; background: linear-gradient(125deg, rgba(38,35,32,.96), rgba(17,17,17,.94)); border-color: rgba(17,17,17,.82); box-shadow: 0 20px 42px rgba(17,17,17,.15), inset 0 1px 0 rgba(255,255,255,.14); }
+.finish-copy h2, .finish-copy > p { color: #F3EEE3; }
+.finish-copy .section-kicker { color: #F07844; }
+.finish-checklist { color: #F3EEE3; border-color: rgba(255,255,255,.16); background: rgba(255,255,255,.075); box-shadow: inset 0 1px 0 rgba(255,255,255,.09); }
+.checklist-top > span, .checklist-top strong, .check-row { color: #F3EEE3; }
+.checklist-top strong, .check-row b { color: #F07844; }
+.progress-track { background: rgba(243,238,227,.16); }
+.progress-track span, #progressFill { background: linear-gradient(90deg, #D9541E, #EF8A60); }
+.check-row { border-top-color: rgba(243,238,227,.13); }
+.custom-check { border-color: rgba(243,238,227,.34); background: rgba(243,238,227,.08); }
+.check-row input:checked + .custom-check { border-color: var(--primary); background: var(--primary); }
+.check-row input:checked + .custom-check::after { border-color: #FFFFFF; }
+.check-row input:checked ~ span:not(.custom-check) { color: rgba(243,238,227,.70); }
+.final-reminder { color: #111111; border-color: rgba(255,255,255,.78); background: rgba(255,255,255,.38); }
+.final-reminder p { color: rgba(17,17,17,.70); }
+.final-reminder strong { color: #111111; }
+.site-footer { border-top-color: rgba(17,17,17,.10); background: rgba(255,255,255,.16); }
+.site-footer > p { color: rgba(17,17,17,.60); }
+.footer-top, .footer-top:hover { color: var(--primary); }
+
+/* Mobile menu: retain the original breakpoints and open/close behavior. */
+@media (max-width: 900px) {
+  body { background-attachment: scroll; }
+  .nav-links {
+    border: 1px solid rgba(255,255,255,.82);
+    border-radius: 0 0 18px 18px;
+    background: rgba(243,238,227,.94);
+    box-shadow: 0 16px 30px rgba(45,31,19,.12), inset 0 1px 0 #FFFFFF;
+    -webkit-backdrop-filter: blur(18px) saturate(135%);
+    backdrop-filter: blur(18px) saturate(135%);
+  }
+  .nav-links a { color: #111111; border-bottom-color: rgba(17,17,17,.09); }
+  .nav-links a:hover, .nav-links a.is-current { color: var(--primary); }
+}
+@media (max-width: 620px) {
+  body { background-attachment: scroll; }
+  .site-header, .intro-strip, .step-card, .prerequisite, .foundation-visual,
+  .architecture-node, .concept-card, .stack-card, .stack-note, .workshop-panel,
+  .brief-output, .finish-card, .finish-checklist, .final-reminder,
+  .float-chip, .layer-toggle, .nav-links {
+    -webkit-backdrop-filter: blur(14px) saturate(125%);
+    backdrop-filter: blur(14px) saturate(125%);
+  }
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .site-header, .intro-strip, .step-card, .prerequisite, .foundation-visual,
+  .architecture-node, .concept-card, .stack-card, .stack-note, .workshop-panel,
+  .brief-output, .finish-card, .finish-checklist, .final-reminder,
+  .float-chip, .layer-toggle, .nav-links { background-color: rgba(255,255,255,.88); }
+}
+@media (prefers-reduced-motion: reduce) { body { background-attachment: scroll; } }
