@@ -1,10 +1,10 @@
+
 /* ==========================================================================
    WEB / LAB — PHASE 02
    Shared visual system with Phase 1:
    Cream #F3EEE3 · Ink #111111 · Burnt Orange #D9541E
    Manrope + Playfair Display + JetBrains Mono
    Glass material, reflections and restrained orange emphasis.
-   Existing Phase 2 layout and interactions are preserved.
    ========================================================================== */
 
 :root {
@@ -38,7 +38,9 @@
 
 *,
 *::before,
-*::after { box-sizing: border-box; }
+*::after {
+  box-sizing: border-box;
+}
 
 html {
   min-width: 320px;
@@ -64,17 +66,41 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-::selection { color: #FFFFFF; background: var(--primary); }
-button, textarea { font: inherit; }
-button, a { -webkit-tap-highlight-color: transparent; }
-button { color: inherit; }
-a { color: var(--primary); text-underline-offset: 4px; }
+::selection {
+  color: #FFFFFF;
+  background: var(--primary);
+}
+
+button,
+textarea {
+  font: inherit;
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button {
+  color: inherit;
+}
+
+a {
+  color: var(--primary);
+  text-underline-offset: 4px;
+}
+
 :focus-visible {
   outline: 3px solid rgba(217, 84, 30, .64);
   outline-offset: 3px;
 }
 
-[hidden] { display: none !important; }
+[hidden] {
+  display: none !important;
+}
+
+
+/* PAGE CANVAS */
 
 .page {
   position: relative;
@@ -85,10 +111,14 @@ a { color: var(--primary); text-underline-offset: 4px; }
   border: 1px solid rgba(255, 255, 255, .66);
   border-radius: 32px;
   background: rgba(255, 255, 255, .16);
-  box-shadow: 0 26px 70px rgba(45, 31, 19, .075), inset 0 1px 0 rgba(255, 255, 255, .72);
+  box-shadow:
+    0 26px 70px rgba(45, 31, 19, .075),
+    inset 0 1px 0 rgba(255, 255, 255, .72);
 }
 
-/* Phase marker: same small technical-label language as Phase 1. */
+
+/* PHASE MARKER */
+
 body > .page > h2 {
   display: flex;
   align-items: center;
@@ -100,6 +130,7 @@ body > .page > h2 {
   letter-spacing: .13em;
   text-transform: uppercase;
 }
+
 body > .page > h2::before {
   display: inline-block;
   width: 32px;
@@ -108,7 +139,9 @@ body > .page > h2::before {
   content: "";
 }
 
-/* Hero — same editorial hierarchy as Phase 1, adapted to Phase 2's content. */
+
+/* HERO */
+
 .hero {
   position: relative;
   isolation: isolate;
@@ -124,11 +157,20 @@ body > .page > h2::before {
   border-radius: var(--radius-xl);
   background:
     radial-gradient(ellipse at 88% 24%, rgba(217, 84, 30, .12), transparent 25rem),
-    linear-gradient(125deg, rgba(255, 255, 255, .64), rgba(255, 255, 255, .25) 65%, rgba(243, 238, 227, .40));
-  box-shadow: var(--glass-shadow), inset 0 1px 0 rgba(255, 255, 255, .96), inset 0 -1px 0 rgba(17, 17, 17, .025);
+    linear-gradient(
+      125deg,
+      rgba(255, 255, 255, .64),
+      rgba(255, 255, 255, .25) 65%,
+      rgba(243, 238, 227, .40)
+    );
+  box-shadow:
+    var(--glass-shadow),
+    inset 0 1px 0 rgba(255, 255, 255, .96),
+    inset 0 -1px 0 rgba(17, 17, 17, .025);
   -webkit-backdrop-filter: blur(18px) saturate(130%);
   backdrop-filter: blur(18px) saturate(130%);
 }
+
 .hero::before {
   position: absolute;
   z-index: -1;
@@ -141,6 +183,7 @@ body > .page > h2::before {
   content: "";
   pointer-events: none;
 }
+
 .hero::after {
   position: absolute;
   z-index: -1;
@@ -150,10 +193,13 @@ body > .page > h2::before {
   height: 330px;
   border: 1px solid rgba(217, 84, 30, .13);
   border-radius: 50%;
-  box-shadow: inset 0 0 90px rgba(217, 84, 30, .035), 0 0 80px rgba(217, 84, 30, .025);
+  box-shadow:
+    inset 0 0 90px rgba(217, 84, 30, .035),
+    0 0 80px rgba(217, 84, 30, .025);
   content: "";
   pointer-events: none;
 }
+
 .hero h1 {
   max-width: 850px;
   margin: 0 0 13px;
@@ -162,7 +208,11 @@ body > .page > h2::before {
   font: 800 clamp(30px, 5vw, 54px)/1.12 var(--font-display);
   letter-spacing: -.045em;
 }
-.hero h1 span { color: var(--primary); }
+
+.hero h1 span {
+  color: var(--primary);
+}
+
 .hero p {
   max-width: 720px;
   margin: 0;
@@ -171,7 +221,9 @@ body > .page > h2::before {
   font: 500 clamp(13px, 1.45vw, 15px)/1.9 var(--font-body);
 }
 
-/* Idea form — translucent panel and clear focus states. */
+
+/* IDEA FORM */
+
 .idea-section {
   position: relative;
   width: 100%;
@@ -180,17 +232,28 @@ body > .page > h2::before {
   padding: clamp(22px, 3.2vw, 36px);
   border: 1px solid var(--glass-edge);
   border-radius: var(--radius-xl);
-  background: linear-gradient(145deg, rgba(255, 255, 255, .66), rgba(255, 255, 255, .35) 62%, rgba(243, 238, 227, .42));
-  box-shadow: var(--glass-shadow), inset 0 1px 0 var(--glass-highlight), inset 0 -1px 0 rgba(17, 17, 17, .025);
+  background:
+    linear-gradient(
+      145deg,
+      rgba(255, 255, 255, .66),
+      rgba(255, 255, 255, .35) 62%,
+      rgba(243, 238, 227, .42)
+    );
+  box-shadow:
+    var(--glass-shadow),
+    inset 0 1px 0 var(--glass-highlight),
+    inset 0 -1px 0 rgba(17, 17, 17, .025);
   -webkit-backdrop-filter: blur(18px) saturate(130%);
   backdrop-filter: blur(18px) saturate(130%);
 }
+
 .idea-heading {
   display: flex;
   align-items: flex-start;
   gap: 15px;
   margin-bottom: 23px;
 }
+
 .idea-icon {
   display: grid;
   flex: 0 0 42px;
@@ -201,10 +264,17 @@ body > .page > h2::before {
   border-radius: 13px;
   color: #FFFFFF;
   background: linear-gradient(145deg, #E36530, #D9541E);
-  box-shadow: 0 5px 0 rgba(111, 43, 17, .15), 0 10px 20px rgba(111, 43, 17, .10), inset 0 1px 0 rgba(255,255,255,.3);
+  box-shadow:
+    0 5px 0 rgba(111, 43, 17, .15),
+    0 10px 20px rgba(111, 43, 17, .10),
+    inset 0 1px 0 rgba(255, 255, 255, .3);
   font-size: 20px;
 }
-.idea-heading > div { min-width: 0; }
+
+.idea-heading > div {
+  min-width: 0;
+}
+
 .idea-heading h2 {
   margin: 0 0 4px;
   color: var(--heading);
@@ -212,6 +282,7 @@ body > .page > h2::before {
   font: 700 clamp(20px, 2.4vw, 26px)/1.25 var(--font-display);
   letter-spacing: -.025em;
 }
+
 .idea-heading p {
   margin: 0;
   color: var(--muted);
@@ -219,7 +290,11 @@ body > .page > h2::before {
   font-size: 12px;
   line-height: 1.75;
 }
-#ideaForm { width: 100%; }
+
+#ideaForm {
+  width: 100%;
+}
+
 .input-label {
   display: block;
   margin: 0 0 9px;
@@ -228,6 +303,7 @@ body > .page > h2::before {
   font-weight: 800;
   letter-spacing: .01em;
 }
+
 #websiteIdea {
   display: block;
   width: 100%;
@@ -238,20 +314,35 @@ body > .page > h2::before {
   outline: none;
   color: var(--text);
   background: rgba(255, 255, 255, .56);
-  box-shadow: inset 0 1px 3px rgba(17, 17, 17, .035), inset 0 1px 0 rgba(255,255,255,.65);
+  box-shadow:
+    inset 0 1px 3px rgba(17, 17, 17, .035),
+    inset 0 1px 0 rgba(255, 255, 255, .65);
   font: 500 13px/1.8 var(--font-body);
   resize: vertical;
-  transition: border-color .2s ease, box-shadow .2s ease, background .2s ease;
+  transition:
+    border-color .2s ease,
+    box-shadow .2s ease,
+    background .2s ease;
 }
-#websiteIdea::placeholder { color: rgba(17, 17, 17, .43); }
-#websiteIdea:hover { border-color: rgba(17, 17, 17, .23); }
+
+#websiteIdea::placeholder {
+  color: rgba(17, 17, 17, .43);
+}
+
+#websiteIdea:hover {
+  border-color: rgba(17, 17, 17, .23);
+}
+
 #websiteIdea:focus,
 #websiteIdea:focus-visible {
   border-color: rgba(217, 84, 30, .72);
   background: rgba(255, 255, 255, .82);
-  box-shadow: 0 0 0 3px rgba(217, 84, 30, .12), inset 0 1px 3px rgba(17, 17, 17, .035);
+  box-shadow:
+    0 0 0 3px rgba(217, 84, 30, .12),
+    inset 0 1px 3px rgba(17, 17, 17, .035);
   outline: none;
 }
+
 .input-footer {
   display: flex;
   align-items: center;
@@ -262,12 +353,20 @@ body > .page > h2::before {
   color: rgba(17, 17, 17, .56);
   font: 500 10px/1.6 var(--font-body);
 }
-.input-footer span { text-align: left; }
+
+.input-footer span {
+  text-align: left;
+}
+
 #characterCount {
   color: var(--primary);
   font: 600 10px/1.6 var(--font-mono);
   white-space: nowrap;
 }
+
+
+/* GENERATE BUTTON */
+
 .generate-button {
   position: relative;
   display: flex;
@@ -282,20 +381,50 @@ body > .page > h2::before {
   border-radius: 11px;
   color: #FFFFFF;
   background: linear-gradient(145deg, #E36530, #D9541E);
-  box-shadow: 0 4px 0 rgba(111, 43, 17, .22), 0 11px 22px rgba(111, 43, 17, .12), inset 0 1px 0 rgba(255, 255, 255, .30);
+  box-shadow:
+    0 4px 0 rgba(111, 43, 17, .22),
+    0 11px 22px rgba(111, 43, 17, .12),
+    inset 0 1px 0 rgba(255, 255, 255, .30);
   font: 800 12px/1.35 var(--font-body);
   cursor: pointer;
-  transition: transform .2s var(--ease-out), box-shadow .2s ease, background .2s ease;
+  transition:
+    transform .2s var(--ease-out),
+    box-shadow .2s ease,
+    background .2s ease;
 }
-.generate-button > span:first-child { font-size: 17px; }
+
+.generate-button > span:first-child {
+  font-size: 17px;
+}
+
 .generate-button:hover:not(:disabled) {
   transform: translateY(-2px);
   background: linear-gradient(145deg, #E87340, #C44919);
-  box-shadow: 0 6px 0 rgba(111, 43, 17, .20), 0 15px 26px rgba(111, 43, 17, .15), inset 0 1px 0 rgba(255,255,255,.24);
+  box-shadow:
+    0 6px 0 rgba(111, 43, 17, .20),
+    0 15px 26px rgba(111, 43, 17, .15),
+    inset 0 1px 0 rgba(255, 255, 255, .24);
 }
-.generate-button:active:not(:disabled) { transform: translateY(1px); box-shadow: 0 2px 0 rgba(111,43,17,.20), 0 6px 12px rgba(111,43,17,.10); }
-.generate-button:disabled { opacity: .74; cursor: wait; transform: none; }
-.button-arrow { margin-left: auto; font-size: 18px; line-height: 1; }
+
+.generate-button:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow:
+    0 2px 0 rgba(111, 43, 17, .20),
+    0 6px 12px rgba(111, 43, 17, .10);
+}
+
+.generate-button:disabled {
+  opacity: .74;
+  cursor: wait;
+  transform: none;
+}
+
+.button-arrow {
+  margin-left: auto;
+  font-size: 18px;
+  line-height: 1;
+}
+
 .privacy-note {
   margin: 13px 0 0;
   color: rgba(17, 17, 17, .56);
@@ -303,6 +432,7 @@ body > .page > h2::before {
   font-size: 10px;
   line-height: 1.7;
 }
+
 .error-message {
   margin: 13px 0 0;
   padding: 11px 13px;
@@ -315,7 +445,9 @@ body > .page > h2::before {
   line-height: 1.65;
 }
 
-/* Recommendation result — ink hero result + matching frosted glass cards. */
+
+/* RESULT PANEL */
+
 .result-panel {
   width: 100%;
   max-width: 1000px;
@@ -326,12 +458,24 @@ body > .page > h2::before {
   color: var(--text);
   background:
     radial-gradient(ellipse at 92% 2%, rgba(217, 84, 30, .075), transparent 25rem),
-    linear-gradient(145deg, rgba(255, 255, 255, .58), rgba(255, 255, 255, .30) 62%, rgba(243, 238, 227, .38));
-  box-shadow: var(--deep-shadow), inset 0 1px 0 rgba(255,255,255,.94), inset 0 -1px 0 rgba(17,17,17,.025);
+    linear-gradient(
+      145deg,
+      rgba(255, 255, 255, .58),
+      rgba(255, 255, 255, .30) 62%,
+      rgba(243, 238, 227, .38)
+    );
+  box-shadow:
+    var(--deep-shadow),
+    inset 0 1px 0 rgba(255, 255, 255, .94),
+    inset 0 -1px 0 rgba(17, 17, 17, .025);
   -webkit-backdrop-filter: blur(18px) saturate(130%);
   backdrop-filter: blur(18px) saturate(130%);
 }
-.result-panel[hidden] { display: none !important; }
+
+.result-panel[hidden] {
+  display: none !important;
+}
+
 .panel-heading {
   display: flex;
   align-items: center;
@@ -341,6 +485,7 @@ body > .page > h2::before {
   padding-bottom: 19px;
   border-bottom: 1px solid rgba(17, 17, 17, .10);
 }
+
 .heading-icon {
   display: grid;
   flex: 0 0 44px;
@@ -351,10 +496,17 @@ body > .page > h2::before {
   border-radius: 14px;
   color: #FFFFFF;
   background: linear-gradient(145deg, #E36530, #D9541E);
-  box-shadow: 0 7px 17px rgba(111, 43, 17, .12), inset 0 1px 0 rgba(255,255,255,.28);
+  box-shadow:
+    0 7px 17px rgba(111, 43, 17, .12),
+    inset 0 1px 0 rgba(255, 255, 255, .28);
   font-size: 20px;
 }
-.heading-text { flex: 1; min-width: 180px; }
+
+.heading-text {
+  flex: 1;
+  min-width: 180px;
+}
+
 .heading-text h2 {
   margin: 0 0 4px;
   color: var(--heading);
@@ -362,6 +514,7 @@ body > .page > h2::before {
   font: 700 clamp(20px, 2.5vw, 28px)/1.22 var(--font-display);
   letter-spacing: -.025em;
 }
+
 .heading-text p {
   margin: 0;
   color: var(--muted);
@@ -369,6 +522,7 @@ body > .page > h2::before {
   font-size: 11px;
   line-height: 1.7;
 }
+
 .ai-badge {
   display: inline-flex;
   align-items: center;
@@ -383,7 +537,9 @@ body > .page > h2::before {
   white-space: nowrap;
 }
 
-/* Best-match card is deliberately dark, echoing Phase 1's dark finish panel. */
+
+/* ACTUAL RECOMMENDATION — DARK FEATURE CARD */
+
 .recommendation-primary {
   position: relative;
   margin: 0;
@@ -395,8 +551,11 @@ body > .page > h2::before {
   background:
     radial-gradient(ellipse at 92% 4%, rgba(217, 84, 30, .22), transparent 22rem),
     linear-gradient(125deg, #292522, #111111 72%);
-  box-shadow: 0 18px 36px rgba(17, 17, 17, .15), inset 0 1px 0 rgba(255,255,255,.13);
+  box-shadow:
+    0 18px 36px rgba(17, 17, 17, .15),
+    inset 0 1px 0 rgba(255, 255, 255, .13);
 }
+
 .recommendation-primary::after {
   position: absolute;
   top: -75px;
@@ -409,6 +568,7 @@ body > .page > h2::before {
   content: "";
   pointer-events: none;
 }
+
 .recommendation-eyebrow {
   position: relative;
   z-index: 1;
@@ -417,6 +577,7 @@ body > .page > h2::before {
   font: 700 9px/1.5 var(--font-mono);
   letter-spacing: .13em;
 }
+
 .recommendation-primary h3 {
   position: relative;
   z-index: 1;
@@ -425,6 +586,7 @@ body > .page > h2::before {
   font: 800 clamp(25px, 3.5vw, 36px)/1.15 var(--font-display);
   letter-spacing: -.035em;
 }
+
 .recommendation-primary > p:not(.recommendation-eyebrow) {
   position: relative;
   z-index: 1;
@@ -435,9 +597,15 @@ body > .page > h2::before {
   font-size: 12px;
   line-height: 1.8;
 }
-.recommendation-primary > p:last-child { margin-top: 12px; color: #F3EEE3; }
 
-/* Supporting result cards use the same pale glass material as Phase 1 cards. */
+.recommendation-primary > p:last-child {
+  margin-top: 12px;
+  color: #F3EEE3;
+}
+
+
+/* SUPPORTING RECOMMENDATION CARDS */
+
 .recommendation-grid,
 .recommendation-columns {
   display: grid;
@@ -445,6 +613,7 @@ body > .page > h2::before {
   gap: 13px;
   margin-top: 14px;
 }
+
 .recommendation-card,
 .recommendation-alternative,
 .recommendation-next-steps {
@@ -454,9 +623,19 @@ body > .page > h2::before {
   border: 1px solid rgba(255, 255, 255, .84);
   border-radius: 16px;
   color: var(--text);
-  background: linear-gradient(145deg, rgba(255,255,255,.64), rgba(255,255,255,.30) 66%, rgba(243,238,227,.34));
-  box-shadow: 0 11px 26px rgba(45, 31, 19, .055), inset 0 1px 0 rgba(255,255,255,.96), inset 0 -1px 0 rgba(17,17,17,.02);
+  background:
+    linear-gradient(
+      145deg,
+      rgba(255, 255, 255, .64),
+      rgba(255, 255, 255, .30) 66%,
+      rgba(243, 238, 227, .34)
+    );
+  box-shadow:
+    0 11px 26px rgba(45, 31, 19, .055),
+    inset 0 1px 0 rgba(255, 255, 255, .96),
+    inset 0 -1px 0 rgba(17, 17, 17, .02);
 }
+
 .recommendation-card h3,
 .recommendation-alternative h3,
 .recommendation-next-steps h3 {
@@ -465,6 +644,7 @@ body > .page > h2::before {
   font: 700 16px/1.35 var(--font-display);
   letter-spacing: -.01em;
 }
+
 .recommendation-card p,
 .recommendation-alternative p {
   margin: 0 0 6px;
@@ -474,13 +654,22 @@ body > .page > h2::before {
   line-height: 1.75;
   overflow-wrap: anywhere;
 }
-.recommendation-muted { color: rgba(17,17,17,.58) !important; font-size: 10px !important; }
-.recommendation-columns { align-items: stretch; }
+
+.recommendation-muted {
+  color: rgba(17, 17, 17, .58) !important;
+  font-size: 10px !important;
+}
+
+.recommendation-columns {
+  align-items: stretch;
+}
+
 .recommendation-card ul,
 .recommendation-next-steps ol {
   margin: 0;
   padding-left: 19px;
 }
+
 .recommendation-card li,
 .recommendation-next-steps li {
   margin: 8px 0;
@@ -489,14 +678,19 @@ body > .page > h2::before {
   font-size: 11px;
   line-height: 1.7;
 }
+
 .recommendation-card li::marker,
-.recommendation-next-steps li::marker { color: var(--primary); font-weight: 800; }
+.recommendation-next-steps li::marker {
+  color: var(--primary);
+  font-weight: 800;
+}
 
 .recommendation-alternative {
   position: relative;
   margin-top: 14px;
   padding-left: 24px;
 }
+
 .recommendation-alternative::before {
   position: absolute;
   top: 17px;
@@ -507,15 +701,346 @@ body > .page > h2::before {
   background: var(--primary);
   content: "";
 }
+
 .recommendation-alternative strong {
   display: inline-block;
   margin: 0 0 7px;
   color: var(--heading);
   font: 800 13px/1.5 var(--font-body);
 }
-.recommendation-next-steps { margin-top: 14px; }
 
-/* Footer retains the original single-line location, with Phase 1 typography. */
+.recommendation-next-steps {
+  margin-top: 14px;
+}
+
+
+/* ==========================================================================
+   SKELETON LOADING EXPERIENCE
+   Mirrors the final result layout while Gemini processes the idea.
+   ========================================================================== */
+
+.recommendation-skeleton {
+  width: 100%;
+}
+
+.recommendation-skeleton[hidden] {
+  display: none !important;
+}
+
+
+/* Loading status row */
+
+.skeleton-status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 58px;
+  margin: 0 0 16px;
+  padding: 12px 15px;
+  border: 1px solid rgba(217, 84, 30, .17);
+  border-radius: 13px;
+  background:
+    linear-gradient(
+      110deg,
+      rgba(255, 255, 255, .58),
+      rgba(255, 255, 255, .30)
+    );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .85),
+    0 7px 18px rgba(45, 31, 19, .035);
+}
+
+.skeleton-spinner {
+  display: grid;
+  flex: 0 0 31px;
+  width: 31px;
+  height: 31px;
+  place-items: center;
+  border: 1px solid rgba(217, 84, 30, .20);
+  border-radius: 50%;
+  background: rgba(217, 84, 30, .08);
+}
+
+.skeleton-spinner span {
+  width: 15px;
+  height: 15px;
+  border: 2px solid rgba(217, 84, 30, .20);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: skeleton-spin .85s linear infinite;
+}
+
+.skeleton-status-copy {
+  display: grid;
+  min-width: 0;
+  gap: 1px;
+}
+
+.skeleton-status-copy strong {
+  color: var(--heading);
+  font: 700 13px/1.4 var(--font-body);
+}
+
+.skeleton-status-copy small {
+  color: var(--muted);
+  font: 500 10px/1.5 var(--font-body);
+}
+
+.skeleton-stage {
+  margin-left: auto;
+  padding: 6px 9px;
+  border: 1px solid rgba(217, 84, 30, .18);
+  border-radius: 999px;
+  color: var(--primary);
+  background: rgba(217, 84, 30, .06);
+  font: 700 8px/1.4 var(--font-mono);
+  letter-spacing: .06em;
+  white-space: nowrap;
+}
+
+.skeleton-stage::before {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin: 0 6px 1px 0;
+  border-radius: 50%;
+  background: var(--primary);
+  box-shadow: 0 0 0 3px rgba(217, 84, 30, .10);
+  content: "";
+}
+
+
+/* Main dark recommendation skeleton */
+
+.skeleton-primary {
+  display: grid;
+  gap: 12px;
+  min-height: 188px;
+  align-content: center;
+  margin: 0;
+  padding: clamp(21px, 3vw, 30px);
+  border: 1px solid rgba(17, 17, 17, .84);
+  border-radius: 19px;
+  background:
+    radial-gradient(ellipse at 92% 4%, rgba(217, 84, 30, .17), transparent 22rem),
+    linear-gradient(125deg, #292522, #111111 72%);
+  box-shadow:
+    0 18px 36px rgba(17, 17, 17, .12),
+    inset 0 1px 0 rgba(255, 255, 255, .10);
+}
+
+
+/* Shared shimmer bars */
+
+.skeleton-bar {
+  position: relative;
+  display: block;
+  height: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background:
+    linear-gradient(
+      90deg,
+      rgba(17, 17, 17, .055) 0%,
+      rgba(17, 17, 17, .09) 45%,
+      rgba(17, 17, 17, .055) 100%
+    );
+  isolation: isolate;
+}
+
+.skeleton-bar::after {
+  position: absolute;
+  inset: 0;
+  transform: translateX(-110%);
+  background:
+    linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, .60) 48%,
+      transparent 100%
+    );
+  animation: skeleton-shimmer 1.45s ease-in-out infinite;
+  content: "";
+}
+
+
+/* Skeleton elements inside dark card */
+
+.skeleton-kicker {
+  width: 150px;
+  height: 8px;
+  background: rgba(217, 84, 30, .24);
+}
+
+.skeleton-kicker::after {
+  background:
+    linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, .35),
+      transparent
+    );
+}
+
+.skeleton-primary-title {
+  width: min(48%, 300px);
+  height: 25px;
+  background: rgba(243, 238, 227, .20);
+}
+
+.skeleton-primary-copy {
+  width: 82%;
+  height: 9px;
+  background: rgba(243, 238, 227, .13);
+}
+
+.skeleton-primary-copy-short {
+  width: 59%;
+}
+
+
+/* Four technology skeleton cards */
+
+.skeleton-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 13px;
+  margin-top: 14px;
+}
+
+.skeleton-card {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  min-width: 0;
+  min-height: 112px;
+  padding: 20px;
+  border: 1px solid rgba(255, 255, 255, .86);
+  border-radius: 16px;
+  background:
+    linear-gradient(
+      145deg,
+      rgba(255, 255, 255, .64),
+      rgba(255, 255, 255, .30) 66%,
+      rgba(243, 238, 227, .34)
+    );
+  box-shadow:
+    0 11px 26px rgba(45, 31, 19, .05),
+    inset 0 1px 0 rgba(255, 255, 255, .96);
+}
+
+.skeleton-card-label {
+  width: 74px;
+  height: 8px;
+  background: rgba(217, 84, 30, .17);
+}
+
+.skeleton-card-title {
+  width: 54%;
+  height: 13px;
+  background: rgba(17, 17, 17, .13);
+}
+
+.skeleton-card-copy {
+  width: 84%;
+  height: 9px;
+}
+
+
+/* Strengths and trade-offs skeleton */
+
+.skeleton-grid-bottom {
+  margin-top: 14px;
+}
+
+.skeleton-list-card {
+  min-height: 153px;
+}
+
+.skeleton-list-line {
+  width: 91%;
+  height: 8px;
+  margin-left: 10px;
+}
+
+.skeleton-list-line::before {
+  position: absolute;
+  top: 1px;
+  left: -12px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: rgba(217, 84, 30, .58);
+  content: "";
+}
+
+.skeleton-list-line-short {
+  width: 66%;
+}
+
+
+/* Alternative and suggested steps skeletons */
+
+.skeleton-wide-card {
+  min-height: 90px;
+  margin-top: 14px;
+}
+
+.skeleton-steps-card {
+  min-height: 116px;
+}
+
+
+/* Animations */
+
+@keyframes skeleton-shimmer {
+  100% {
+    transform: translateX(110%);
+  }
+}
+
+@keyframes skeleton-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes skeleton-enter {
+  from {
+    opacity: 0;
+    transform: translateY(7px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.recommendation-skeleton {
+  animation: skeleton-enter .28s ease-out both;
+}
+
+/* Stagger the shimmer slightly to make the loading state feel natural. */
+.skeleton-grid > .skeleton-card:nth-child(2) .skeleton-bar::after {
+  animation-delay: .12s;
+}
+
+.skeleton-grid > .skeleton-card:nth-child(3) .skeleton-bar::after {
+  animation-delay: .24s;
+}
+
+.skeleton-grid > .skeleton-card:nth-child(4) .skeleton-bar::after {
+  animation-delay: .36s;
+}
+
+.skeleton-grid-bottom > .skeleton-card:nth-child(2) .skeleton-bar::after {
+  animation-delay: .18s;
+}
+
+
+/* FOOTER */
+
 .page-footer {
   padding: 22px 6px 3px;
   color: rgba(17, 17, 17, .52);
@@ -525,70 +1050,216 @@ body > .page > h2::before {
   text-transform: uppercase;
 }
 
-/* Motion is deliberately subtle and disabled for reduced-motion preferences. */
+
+/* HOVER INTERACTIONS */
+
 @media (hover: hover) {
   .idea-section,
   .recommendation-card,
   .recommendation-alternative,
   .recommendation-next-steps {
-    transition: transform .22s var(--ease-out), box-shadow .22s ease, border-color .22s ease;
+    transition:
+      transform .22s var(--ease-out),
+      box-shadow .22s ease,
+      border-color .22s ease;
   }
+
   .recommendation-card:hover,
   .recommendation-alternative:hover,
   .recommendation-next-steps:hover {
     transform: translateY(-2px);
     border-color: rgba(217, 84, 30, .30);
-    box-shadow: 0 15px 30px rgba(45,31,19,.075), inset 0 1px 0 rgba(255,255,255,.96);
+    box-shadow:
+      0 15px 30px rgba(45, 31, 19, .075),
+      inset 0 1px 0 rgba(255, 255, 255, .96);
   }
 }
 
-/* Responsive: preserve the original one-column mobile result layout. */
+
+/* RESPONSIVE LAYOUT */
+
 @media (max-width: 760px) {
-  body { padding: 12px 9px 18px; background-attachment: scroll; }
-  .page { padding: 15px; border-radius: 22px; }
-  .hero { min-height: 205px; padding: 27px 22px; }
-  .idea-section { padding: 21px; }
-  .result-panel { padding: 17px; }
-  .recommendation-primary { padding: 21px; }
+  body {
+    padding: 12px 9px 18px;
+    background-attachment: scroll;
+  }
+
+  .page {
+    padding: 15px;
+    border-radius: 22px;
+  }
+
+  .hero {
+    min-height: 205px;
+    padding: 27px 22px;
+  }
+
+  .idea-section {
+    padding: 21px;
+  }
+
+  .result-panel {
+    padding: 17px;
+  }
+
+  .recommendation-primary {
+    padding: 21px;
+  }
 }
+
 @media (max-width: 650px) {
   .recommendation-grid,
-  .recommendation-columns { grid-template-columns: minmax(0, 1fr); }
+  .recommendation-columns,
+  .skeleton-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .recommendation-card,
   .recommendation-alternative,
-  .recommendation-next-steps { padding: 17px; }
-  .panel-heading { align-items: flex-start; }
-  .ai-badge { margin-left: 59px; }
-}
-@media (max-width: 430px) {
-  body { padding: 8px 5px 14px; }
-  .page { padding: 10px; border-radius: 18px; }
-  body > .page > h2 { font-size: 8px; letter-spacing: .09em; }
-  .hero { min-height: 185px; padding: 23px 16px; border-radius: 19px; }
-  .hero h1 { font-size: clamp(27px, 9vw, 36px); }
-  .idea-section { padding: 16px; border-radius: 19px; }
-  .idea-heading { gap: 11px; }
-  .idea-icon { flex-basis: 37px; width: 37px; height: 37px; }
-  .input-footer { font-size: 9px; }
-  .generate-button { min-height: 49px; padding: 11px 12px; font-size: 11px; }
-  .result-panel { padding: 12px; border-radius: 19px; }
-  .heading-icon { flex-basis: 38px; width: 38px; height: 38px; }
-  .heading-text { min-width: 0; }
-  .ai-badge { margin-left: 49px; }
+  .recommendation-next-steps {
+    padding: 17px;
+  }
+
+  .panel-heading {
+    align-items: flex-start;
+  }
+
+  .ai-badge {
+    margin-left: 59px;
+  }
+
+  .skeleton-stage {
+    display: none;
+  }
+
+  .skeleton-primary-title {
+    width: 72%;
+  }
 }
 
-/* Native/fallback material for browsers without backdrop-filter. */
+@media (max-width: 430px) {
+  body {
+    padding: 8px 5px 14px;
+  }
+
+  .page {
+    padding: 10px;
+    border-radius: 18px;
+  }
+
+  body > .page > h2 {
+    font-size: 8px;
+    letter-spacing: .09em;
+  }
+
+  .hero {
+    min-height: 185px;
+    padding: 23px 16px;
+    border-radius: 19px;
+  }
+
+  .hero h1 {
+    font-size: clamp(27px, 9vw, 36px);
+  }
+
+  .idea-section {
+    padding: 16px;
+    border-radius: 19px;
+  }
+
+  .idea-heading {
+    gap: 11px;
+  }
+
+  .idea-icon {
+    flex-basis: 37px;
+    width: 37px;
+    height: 37px;
+  }
+
+  .input-footer {
+    font-size: 9px;
+  }
+
+  .generate-button {
+    min-height: 49px;
+    padding: 11px 12px;
+    font-size: 11px;
+  }
+
+  .result-panel {
+    padding: 12px;
+    border-radius: 19px;
+  }
+
+  .heading-icon {
+    flex-basis: 38px;
+    width: 38px;
+    height: 38px;
+  }
+
+  .heading-text {
+    min-width: 0;
+  }
+
+  .ai-badge {
+    margin-left: 49px;
+  }
+
+  .skeleton-status {
+    align-items: flex-start;
+    gap: 9px;
+    padding: 11px;
+  }
+
+  .skeleton-status-copy small {
+    font-size: 9px;
+  }
+
+  .skeleton-primary {
+    min-height: 165px;
+    padding: 20px;
+  }
+
+  .skeleton-card {
+    min-height: 105px;
+    padding: 17px;
+  }
+}
+
+
+/* FALLBACK FOR BROWSERS WITHOUT BACKDROP FILTER */
+
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .page { background: rgba(255, 255, 255, .46); }
-  .hero, .idea-section, .result-panel,
-  .recommendation-card, .recommendation-alternative,
-  .recommendation-next-steps {
+  .page {
+    background: rgba(255, 255, 255, .46);
+  }
+
+  .hero,
+  .idea-section,
+  .result-panel,
+  .recommendation-card,
+  .recommendation-alternative,
+  .recommendation-next-steps,
+  .skeleton-card,
+  .skeleton-status {
     background-color: rgba(255, 255, 255, .90);
   }
-  .recommendation-primary { background: #171513; }
+
+  .recommendation-primary,
+  .skeleton-primary {
+    background: #171513;
+  }
 }
+
+
+/* ACCESSIBILITY: RESPECT REDUCED MOTION */
+
 @media (prefers-reduced-motion: reduce) {
-  html { scroll-behavior: auto; }
+  html {
+    scroll-behavior: auto;
+  }
+
   *,
   *::before,
   *::after {
@@ -597,5 +1268,17 @@ body > .page > h2::before {
     transition-duration: .01ms !important;
     scroll-behavior: auto !important;
   }
-  body { background-attachment: scroll; }
+
+  body {
+    background-attachment: scroll;
+  }
+
+  .skeleton-spinner span,
+  .skeleton-bar::after {
+    animation: none;
+  }
+
+  .recommendation-skeleton {
+    animation: none;
+  }
 }

@@ -1,117 +1,363 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Get an AI-powered technology stack recommendation for your website or application idea.">
   <title>Phase 2 — Technology Stack Advisor | WEB / LAB</title>
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700;800&display=swap" rel="stylesheet">
+
   <link rel="stylesheet" href="./phase-2.css">
   <script src="./phase-2.js" defer></script>
 </head>
+
 <body>
   <main class="page">
+
     <h2>PHASE: 2 — TECHNOLOGY STACK RECOMMENDATION</h2>
 
+    <!-- HERO -->
     <section class="hero">
       <h1>Find the <span>right technology stack</span> for your idea</h1>
-      <p>Describe the website or application you want to build. AI will analyse its requirements and recommend a suitable technology stack.</p>
+      <p>
+        Describe the website or application you want to build.
+        AI will analyse its requirements and recommend a suitable
+        technology stack.
+      </p>
     </section>
 
+
+    <!-- PROJECT IDEA FORM -->
     <section class="idea-section">
+
       <div class="idea-heading">
-        <span class="idea-icon">✧</span>
+        <span class="idea-icon" aria-hidden="true">✧</span>
+
         <div>
           <h2>Describe your website idea</h2>
-          <p>Explain what the product should do, who will use it, and its important features.</p>
+          <p>
+            Explain what the product should do, who will use it,
+            and its important features.
+          </p>
         </div>
       </div>
 
+
       <form id="ideaForm">
-        <label for="websiteIdea" class="input-label">What do you want to build?</label>
-        <textarea id="websiteIdea" name="websiteIdea" rows="5" maxlength="3000" required
-          placeholder="Example: I want to build an online learning platform where students can sign up, watch lessons, take quizzes, track progress, and purchase premium courses..."></textarea>
+
+        <label for="websiteIdea" class="input-label">
+          What do you want to build?
+        </label>
+
+        <textarea
+          id="websiteIdea"
+          name="websiteIdea"
+          rows="5"
+          maxlength="3000"
+          required
+          placeholder="Example: I want to build an online learning platform where students can sign up, watch lessons, take quizzes, track progress, and purchase premium courses..."
+        ></textarea>
+
 
         <div class="input-footer">
-          <span>Include the main features and any special requirements.</span>
+          <span>
+            Include the main features and any special requirements.
+          </span>
+
           <span id="characterCount">0 / 3000</span>
         </div>
 
-        <button type="submit" id="recommendButton" class="generate-button">
-          <span>✧</span>
-          <span id="buttonText">Recommend a Technology Stack</span>
-          <span class="button-arrow">→</span>
+
+        <button
+          type="submit"
+          id="recommendButton"
+          class="generate-button"
+        >
+          <span aria-hidden="true">✧</span>
+
+          <span id="buttonText">
+            Recommend a Technology Stack
+          </span>
+
+          <span class="button-arrow" aria-hidden="true">→</span>
         </button>
 
-        <p class="privacy-note">Phase 2 only recommends a technology stack. It does not generate folders or create code. Your Phase 3 full-project generator remains separate.</p>
-        <p id="errorMessage" class="error-message" role="alert" hidden></p>
+
+        <p class="privacy-note">
+          Phase 2 only recommends a technology stack. It does not
+          generate folders or create code. Your Phase 3 full-project
+          generator remains separate.
+        </p>
+
+
+        <p
+          id="errorMessage"
+          class="error-message"
+          role="alert"
+          hidden
+        ></p>
+
       </form>
     </section>
 
-    <section id="resultSection" class="panel result-panel" hidden aria-live="polite">
+
+    <!-- RECOMMENDATION RESULT AREA -->
+    <section
+      id="resultSection"
+      class="panel result-panel"
+      hidden
+      aria-busy="false"
+      aria-live="polite"
+    >
+
+      <!-- RESULT HEADER -->
       <div class="panel-heading">
-        <div class="heading-icon">✨</div>
-        <div class="heading-text">
-          <h2 id="recommendedStackTitle">Recommended technology stack</h2>
-          <p id="resultSummary">Your recommendation will appear here.</p>
+
+        <div class="heading-icon" aria-hidden="true">
+          ✨
         </div>
-        <span class="ai-badge">AI recommendation</span>
+
+        <div class="heading-text">
+          <h2 id="recommendedStackTitle">
+            Recommended technology stack
+          </h2>
+
+          <p id="resultSummary">
+            Your recommendation will appear here.
+          </p>
+        </div>
+
+        <span class="ai-badge">
+          AI recommendation
+        </span>
+
       </div>
 
-      <div id="recommendationContent">
-        <article class="recommendation-primary">
-          <p class="recommendation-eyebrow">BEST MATCH FOR YOUR IDEA</p>
-          <h3 id="stackName">—</h3>
-          <p id="stackFullName">—</p>
-          <p id="whyRecommended">—</p>
+
+      <!-- =========================================
+           SKELETON LOADING STATE
+           Visible only while Gemini is processing.
+           ========================================= -->
+
+      <div
+        id="recommendationSkeleton"
+        class="recommendation-skeleton"
+        hidden
+      >
+
+        <!-- Loading status -->
+        <div
+          class="skeleton-status"
+          role="status"
+          aria-live="polite"
+        >
+
+          <span class="skeleton-spinner" aria-hidden="true">
+            <span></span>
+          </span>
+
+          <span class="skeleton-status-copy">
+            <strong>Analysing your idea</strong>
+
+            <small>
+              Comparing features, project complexity,
+              and data requirements. Keep this page open.
+            </small>
+          </span>
+
+          <span class="skeleton-stage">
+            AI REVIEW IN PROGRESS
+          </span>
+
+        </div>
+
+
+        <!-- Primary recommended stack skeleton -->
+        <article class="skeleton-primary" aria-hidden="true">
+
+          <span class="skeleton-bar skeleton-kicker"></span>
+
+          <span class="skeleton-bar skeleton-primary-title"></span>
+
+          <span class="skeleton-bar skeleton-primary-copy"></span>
+
+          <span class="skeleton-bar skeleton-primary-copy skeleton-primary-copy-short"></span>
+
         </article>
 
+
+        <!-- Frontend / Backend / Database / Complexity skeleton -->
+        <div class="skeleton-grid" aria-hidden="true">
+
+          <article class="skeleton-card">
+            <span class="skeleton-bar skeleton-card-label"></span>
+            <span class="skeleton-bar skeleton-card-title"></span>
+            <span class="skeleton-bar skeleton-card-copy"></span>
+          </article>
+
+          <article class="skeleton-card">
+            <span class="skeleton-bar skeleton-card-label"></span>
+            <span class="skeleton-bar skeleton-card-title"></span>
+            <span class="skeleton-bar skeleton-card-copy"></span>
+          </article>
+
+          <article class="skeleton-card">
+            <span class="skeleton-bar skeleton-card-label"></span>
+            <span class="skeleton-bar skeleton-card-title"></span>
+            <span class="skeleton-bar skeleton-card-copy"></span>
+          </article>
+
+          <article class="skeleton-card">
+            <span class="skeleton-bar skeleton-card-label"></span>
+            <span class="skeleton-bar skeleton-card-title"></span>
+            <span class="skeleton-bar skeleton-card-copy"></span>
+          </article>
+
+        </div>
+
+
+        <!-- Strengths / Trade-offs skeleton -->
+        <div class="skeleton-grid skeleton-grid-bottom" aria-hidden="true">
+
+          <article class="skeleton-card skeleton-list-card">
+            <span class="skeleton-bar skeleton-card-title"></span>
+            <span class="skeleton-bar skeleton-list-line"></span>
+            <span class="skeleton-bar skeleton-list-line"></span>
+            <span class="skeleton-bar skeleton-list-line skeleton-list-line-short"></span>
+          </article>
+
+          <article class="skeleton-card skeleton-list-card">
+            <span class="skeleton-bar skeleton-card-title"></span>
+            <span class="skeleton-bar skeleton-list-line"></span>
+            <span class="skeleton-bar skeleton-list-line"></span>
+            <span class="skeleton-bar skeleton-list-line skeleton-list-line-short"></span>
+          </article>
+
+        </div>
+
+
+        <!-- Alternative stack skeleton -->
+        <article
+          class="skeleton-card skeleton-wide-card"
+          aria-hidden="true"
+        >
+          <span class="skeleton-bar skeleton-card-title"></span>
+          <span class="skeleton-bar skeleton-list-line"></span>
+        </article>
+
+
+        <!-- Suggested next steps skeleton -->
+        <article
+          class="skeleton-card skeleton-wide-card skeleton-steps-card"
+          aria-hidden="true"
+        >
+          <span class="skeleton-bar skeleton-card-title"></span>
+          <span class="skeleton-bar skeleton-list-line"></span>
+          <span class="skeleton-bar skeleton-list-line skeleton-list-line-short"></span>
+        </article>
+
+      </div>
+
+
+      <!-- =========================================
+           ACTUAL GEMINI RECOMMENDATION
+           Hidden until a successful API response.
+           ========================================= -->
+
+      <div id="recommendationContent" hidden>
+
+        <!-- Main recommendation -->
+        <article class="recommendation-primary">
+
+          <p class="recommendation-eyebrow">
+            BEST MATCH FOR YOUR IDEA
+          </p>
+
+          <h3 id="stackName">—</h3>
+
+          <p id="stackFullName">—</p>
+
+          <p id="whyRecommended">—</p>
+
+        </article>
+
+
+        <!-- Technology cards -->
         <div class="recommendation-grid">
+
           <article class="recommendation-card">
             <h3>Frontend</h3>
             <p id="frontendTechnology">—</p>
           </article>
+
           <article class="recommendation-card">
             <h3>Backend</h3>
             <p id="backendTechnology">—</p>
           </article>
+
           <article class="recommendation-card">
             <h3>Database</h3>
             <p id="databaseTechnology">—</p>
             <p id="databaseReason" class="recommendation-muted"></p>
           </article>
+
           <article class="recommendation-card">
             <h3>Project complexity</h3>
             <p id="complexityLevel">—</p>
           </article>
+
         </div>
 
+
+        <!-- Strengths and trade-offs -->
         <div class="recommendation-columns">
+
           <article class="recommendation-card">
             <h3>Why this stack fits</h3>
             <ul id="strengthsList"></ul>
           </article>
+
           <article class="recommendation-card">
             <h3>Trade-offs to understand</h3>
             <ul id="tradeoffsList"></ul>
           </article>
+
         </div>
 
+
+        <!-- Alternative -->
         <article class="recommendation-alternative">
+
           <h3>Alternative worth considering</h3>
+
           <strong id="alternativeStackName">—</strong>
+
           <p id="alternativeReason">—</p>
+
         </article>
 
+
+        <!-- Next steps -->
         <article class="recommendation-next-steps">
+
           <h3>Suggested next steps</h3>
+
           <ol id="nextStepsList"></ol>
+
         </article>
+
       </div>
     </section>
 
-    <footer class="page-footer">WEB / LAB · PHASE 02 — TECHNOLOGY STACK ADVISOR</footer>
+
+    <footer class="page-footer">
+      WEB / LAB · PHASE 02 — TECHNOLOGY STACK ADVISOR
+    </footer>
+
   </main>
 </body>
 </html>
