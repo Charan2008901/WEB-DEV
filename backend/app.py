@@ -8,13 +8,15 @@ Environment variables:
     GOOGLE_CLIENT_ID, GEMINI_API_KEY      required
     REDIS_URL                             strongly recommended in production
     GEMINI_MODEL                          default gemini-3.8-flash
-    GEMINI_FAST_MODEL                     optional model for Phase 2 recommendations
+    GEMINI_FAST_MODEL                     Phase 2 primary (default gemini-3.5-flash-lite)
+    GEMINI_FAST_FALLBACK_MODEL            Phase 2 fallback (default gemini-3.5-flash)
     GEMINI_BRIEF_MODEL                    default gemini-3.5-flash-lite for Phase 1
     GEMINI_BRIEF_TIMEOUT_SECONDS          default 30; one attempt for Phase 1
     GEMINI_BRIEF_THINKING_LEVEL           default minimal for Phase 1
     GEMINI_FAST_THINKING_LEVEL            low / medium / high (default low)
     GEMINI_THINKING_LEVEL                 low / medium / high (default medium)
-    GEMINI_FAST_TIMEOUT_SECONDS           per-attempt timeout (default 25)
+    GEMINI_FAST_TIMEOUT_SECONDS           Phase 2 primary timeout (default 18)
+    GEMINI_FAST_FALLBACK_TIMEOUT_SECONDS  Phase 2 fallback timeout (default 22)
     GEMINI_TIMEOUT_SECONDS                per-attempt timeout for Phase 3 (default 45)
     TRUSTED_PROXY_COUNT                   proxy hops in front of the app (Render: 1)
     CORS_ORIGINS                          comma-separated allowed origins
@@ -67,7 +69,12 @@ except ImportError:  # pragma: no cover
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
-GEMINI_FAST_MODEL = os.getenv("GEMINI_FAST_MODEL") or GEMINI_MODEL
+# Phase 2 is a compact structured-output task. Keep it off the slower default
+# model and use a separate stable fallback if the primary model is unavailable.
+GEMINI_FAST_MODEL = os.getenv("GEMINI_FAST_MODEL", "gemini-3.5-flash-lite")
+GEMINI_FAST_FALLBACK_MODEL = os.getenv(
+    "GEMINI_FAST_FALLBACK_MODEL", "gemini-3.5-flash"
+)
 # Phase 1 is a short writing task: use Google's low-latency Flash-Lite model.
 # This is deliberately separate so Phase 2 and Phase 3 keep their current models.
 GEMINI_BRIEF_MODEL = os.getenv("GEMINI_BRIEF_MODEL", "gemini-3.5-flash-lite")
@@ -95,7 +102,10 @@ GEMINI_BRIEF_THINKING_LEVEL = _read_thinking_level(
     "GEMINI_BRIEF_THINKING_LEVEL", "minimal"
 )
 GEMINI_FAST_THINKING_LEVEL = _read_thinking_level(
-    "GEMINI_FAST_THINKING_LEVEL", "low"
+    "GEMINI_FAST_THINKING_LEVEL", "minimal"
+)
+GEMINI_FAST_FALLBACK_THINKING_LEVEL = _read_thinking_level(
+    "GEMINI_FAST_FALLBACK_THINKING_LEVEL", "minimal"
 )
 GEMINI_THINKING_LEVEL = _read_thinking_level(
     "GEMINI_THINKING_LEVEL", "medium"
@@ -104,7 +114,10 @@ GEMINI_THINKING_LEVEL = _read_thinking_level(
 # Per-attempt HTTP timeouts. Fast tasks get a shorter budget; Phase 3 has
 # more output and gets longer. One bounded retry is allowed for transient errors.
 GEMINI_FAST_TIMEOUT_MS = int(
-    float(os.getenv("GEMINI_FAST_TIMEOUT_SECONDS", "25")) * 1000
+    float(os.getenv("GEMINI_FAST_TIMEOUT_SECONDS", "18")) * 1000
+)
+GEMINI_FAST_FALLBACK_TIMEOUT_MS = int(
+    float(os.getenv("GEMINI_FAST_FALLBACK_TIMEOUT_SECONDS", "22")) * 1000
 )
 GEMINI_TIMEOUT_MS = int(
     float(os.getenv("GEMINI_TIMEOUT_SECONDS", "45")) * 1000
@@ -1199,6 +1212,92 @@ def generate_json(
     raise last_error
 
 
+def _api_error_code(exc):
+    """Return a numeric Gemini API status code when available."""
+    raw_code = getattr(exc, "code", None)
+    try:
+        return int(raw_code)
+    except (TypeError, ValueError):
+        return None
+
+
+def generate_json_with_fallback(
+    prompt,
+    schema,
+    temperature,
+    max_tokens,
+    validate,
+    primary_model,
+    fallback_model,
+    primary_thinking_level,
+    fallback_thinking_level,
+    primary_timeout_ms,
+    fallback_timeout_ms,
+):
+    """Try one fast primary call, then one alternate model for transient failures.
+
+    Avoids repeating the same slow model call. Fallback is limited to API
+    capacity/rate/deadline failures and client timeouts; configuration errors
+    and other non-transient failures are returned immediately.
+    """
+    try:
+        return generate_json(
+            prompt, schema, temperature, max_tokens, validate,
+            model=primary_model,
+            thinking_level=primary_thinking_level,
+            thinking_budget=None,
+            timeout_ms=primary_timeout_ms,
+            max_attempts=1,
+        )
+    except (genai_errors.APIError, TimeoutError, AIOutputError) as primary_error:
+        primary_code = _api_error_code(primary_error)
+        transient_codes = {429, 500, 502, 503, 504, 604}
+        should_fallback = (
+            isinstance(primary_error, (TimeoutError, AIOutputError))
+            or primary_code in transient_codes
+        )
+        if not should_fallback:
+            raise
+        if not fallback_model or fallback_model == primary_model:
+            app.logger.error(
+                "Phase 2 fallback skipped: fallback model is missing or equals primary model."
+            )
+            raise
+
+        app.logger.warning(
+            "Phase 2 primary model failed: model=%s upstream_status=%s; "
+            "trying fallback model=%s once.",
+            primary_model,
+            primary_code if primary_code is not None else type(primary_error).__name__,
+            fallback_model,
+        )
+
+        try:
+            result = generate_json(
+                prompt, schema, temperature, max_tokens, validate,
+                model=fallback_model,
+                thinking_level=fallback_thinking_level,
+                thinking_budget=None,
+                timeout_ms=fallback_timeout_ms,
+                max_attempts=1,
+            )
+            app.logger.info(
+                "Phase 2 recommendation succeeded using fallback model=%s.",
+                fallback_model,
+            )
+            return result
+        except Exception as fallback_error:
+            app.logger.exception(
+                "Phase 2 fallback model failed: primary_model=%s fallback_model=%s "
+                "fallback_status=%s",
+                primary_model,
+                fallback_model,
+                _api_error_code(fallback_error)
+                if isinstance(fallback_error, genai_errors.APIError)
+                else type(fallback_error).__name__,
+            )
+            raise fallback_error
+
 
 def quota_for(auth):
     if auth.state == "valid":
@@ -1209,7 +1308,9 @@ def quota_for(auth):
 def run_generation(auth, prompt, schema, temperature, max_tokens, validate,
                    cache_key=None, label="result", model=None,
                    thinking_level=None, thinking_budget=None,
-                   timeout_ms=None, max_attempts=2):
+                   timeout_ms=None, max_attempts=2,
+                   fallback_model=None, fallback_thinking_level=None,
+                   fallback_timeout_ms=None):
     """Reserve quota -> call Gemini -> refund quota if anything fails."""
     if not GEMINI_API_KEY:
         app.logger.error("GEMINI_API_KEY is not configured.")
@@ -1224,14 +1325,25 @@ def run_generation(auth, prompt, schema, temperature, max_tokens, validate,
 
     succeeded = False
     try:
-        result = generate_json(
-            prompt, schema, temperature, max_tokens, validate,
-            model=model,
-            thinking_level=thinking_level,
-            thinking_budget=thinking_budget,
-            timeout_ms=timeout_ms,
-            max_attempts=max_attempts,
-        )
+        if fallback_model:
+            result = generate_json_with_fallback(
+                prompt, schema, temperature, max_tokens, validate,
+                primary_model=model or GEMINI_MODEL,
+                fallback_model=fallback_model,
+                primary_thinking_level=thinking_level,
+                fallback_thinking_level=fallback_thinking_level,
+                primary_timeout_ms=timeout_ms,
+                fallback_timeout_ms=fallback_timeout_ms,
+            )
+        else:
+            result = generate_json(
+                prompt, schema, temperature, max_tokens, validate,
+                model=model,
+                thinking_level=thinking_level,
+                thinking_budget=thinking_budget,
+                timeout_ms=timeout_ms,
+                max_attempts=max_attempts,
+            )
         succeeded = True
     except AIOutputError:
         app.logger.exception("Gemini produced an unusable %s", label)
@@ -1251,9 +1363,11 @@ def run_generation(auth, prompt, schema, temperature, max_tokens, validate,
         # Log the model and upstream status so Render logs reveal the real
         # Gemini failure, without logging the user's project idea or API key.
         app.logger.error(
-            "Gemini API failure: task=%s model=%s upstream_status=%s detail=%s",
+            "Gemini API failure: task=%s model=%s fallback_model=%s "
+            "upstream_status=%s detail=%s",
             label,
             model or GEMINI_MODEL,
+            fallback_model or "not-configured",
             code if code is not None else "unknown",
             str(exc)[:500],
         )
@@ -1560,20 +1674,28 @@ def recommend_stack():
     )
 
     app.logger.info(
-        "Phase 2 stack recommendation: model=%s timeout_ms=%s thinking_level=%s",
-        GEMINI_FAST_MODEL, GEMINI_FAST_TIMEOUT_MS, GEMINI_FAST_THINKING_LEVEL,
+        "Phase 2 stack recommendation: primary_model=%s primary_timeout_ms=%s "
+        "fallback_model=%s fallback_timeout_ms=%s thinking_level=%s",
+        GEMINI_FAST_MODEL,
+        GEMINI_FAST_TIMEOUT_MS,
+        GEMINI_FAST_FALLBACK_MODEL,
+        GEMINI_FAST_FALLBACK_TIMEOUT_MS,
+        GEMINI_FAST_THINKING_LEVEL,
     )
 
     return run_generation(
         auth, prompt, RECOMMENDATION_SCHEMA,
-        temperature=0.8, max_tokens=3000,
+        temperature=None, max_tokens=1800,
         validate=validate_recommendation, cache_key=cache_key,
         label="recommendation",
         model=GEMINI_FAST_MODEL,
         thinking_level=GEMINI_FAST_THINKING_LEVEL,
-        thinking_budget=GEMINI_FAST_THINKING_BUDGET,
+        thinking_budget=None,
         timeout_ms=GEMINI_FAST_TIMEOUT_MS,
-        max_attempts=2,
+        max_attempts=1,
+        fallback_model=GEMINI_FAST_FALLBACK_MODEL,
+        fallback_thinking_level=GEMINI_FAST_FALLBACK_THINKING_LEVEL,
+        fallback_timeout_ms=GEMINI_FAST_FALLBACK_TIMEOUT_MS,
     )
 
 
