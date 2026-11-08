@@ -3,147 +3,251 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AI Project Builder — Phase 3</title>
+  <meta name="theme-color" content="#F3EEE3">
+  <title>Phase 3 — AI Project Builder | WEB / LAB</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./phase-3.css">
   <script src="./phase-3.js" defer></script>
 </head>
 <body>
   <main class="page">
-    <header class="page-header">
-      <p class="eyebrow">WEB DEVELOPMENT LEARNING PLATFORM</p>
-      <h1>PHASE: 3 — AI PROJECT BUILDER</h1>
-      <p class="subtitle">Turn your idea into a project blueprint and a master prompt for your coding agent.</p>
+    <p class="phase-marker">PHASE: 3 — AI PROJECT BUILDER</p>
+
+    <header class="hero">
+      <span class="hero-kicker"><span class="kicker-dot"></span> FROM IDEA TO IMPLEMENTATION</span>
+      <h1>Turn your idea into a <span>build-ready project.</span></h1>
+      <p>Define your application, choose a compatible database, and generate a structured project blueprint with a master prompt for your coding agent.</p>
+      <div class="hero-orbit hero-orbit-one" aria-hidden="true"></div>
+      <div class="hero-orbit hero-orbit-two" aria-hidden="true"></div>
+      <div class="hero-grid-mark" aria-hidden="true">03</div>
     </header>
 
-    <section class="panel intro-panel">
-      <div>
-        <span class="step-label">STEP 1</span>
-        <h2>Describe what you want to build</h2>
-        <p>Explain the app in your own words. Mention the users, features, and any special requirements you already know.</p>
+    <section class="idea-section" aria-labelledby="ideaTitle">
+      <div class="section-heading">
+        <span class="heading-icon" aria-hidden="true">✧</span>
+        <div class="heading-copy">
+          <span class="section-kicker">STEP 01 / PROJECT DEFINITION</span>
+          <h2 id="ideaTitle">Describe what you want to build</h2>
+          <p>Tell us what the product does, who will use it, and which features matter most.</p>
+        </div>
       </div>
 
       <form id="ideaForm">
-        <label for="websiteIdea">Your project idea</label>
-        <textarea id="websiteIdea" maxlength="3000" required
-          placeholder="Example: Build a student project portal where students can sign up, upload projects, search projects by technology, and receive feedback from mentors."></textarea>
-
-        <div class="field-footer">
+        <label class="input-label" for="websiteIdea">Your project idea</label>
+        <textarea id="websiteIdea" name="websiteIdea" maxlength="3000" minlength="10" required
+          placeholder="Example: Build a student project portal where students can register, upload projects, search by technology, and receive feedback from mentors..."></textarea>
+        <div class="input-footer">
+          <span>Include users, main workflows, features and special requirements.</span>
           <span id="charCount">0 / 3000</span>
-          <span>Be specific for a better blueprint.</span>
         </div>
 
-        <div class="field-group">
-          <label for="framework">Preferred stack</label>
-          <select id="framework">
-            <option value="mern">MERN — MongoDB, Express, React, Node.js</option>
-            <option value="mean">MEAN — MongoDB, Express, Angular, Node.js</option>
-            <option value="django">Django — Python</option>
-            <option value="lamp">LAMP — Linux, Apache, MySQL, PHP</option>
-            <option value="flask" selected>Flask — Python</option>
-            <option value="spring">Spring Boot — Java</option>
-          </select>
-          <p class="hint">Choose a stack you want to learn, or keep your preferred stack selected.</p>
+        <div class="field-divider"></div>
+        <div class="field-grid">
+          <div class="field-group">
+            <label class="input-label" for="framework">Preferred technology stack</label>
+            <select id="framework" name="framework">
+              <option value="mern">MERN — MongoDB · Express · React · Node.js</option>
+              <option value="mean">MEAN — MongoDB · Express · Angular · Node.js</option>
+              <option value="django">Django — Python</option>
+              <option value="lamp">LAMP — Linux · Apache · MySQL · PHP</option>
+              <option value="flask" selected>Flask — Python</option>
+              <option value="spring">Spring Boot — Java</option>
+            </select>
+            <p class="field-hint">Choose the stack you want to build with. Phase 3 will keep this selection.</p>
+          </div>
+          <div class="field-note">
+            <span class="field-note-icon" aria-hidden="true">⌘</span>
+            <div>
+              <strong>What happens next?</strong>
+              <p>We’ll show database options that are supported by your selected stack. You stay in control of the final choice.</p>
+            </div>
+          </div>
         </div>
 
-        <button class="primary-btn" type="submit">
-          Continue to database selection <span aria-hidden="true">→</span>
+        <button class="generate-button" type="submit" id="continueButton">
+          <span aria-hidden="true">✧</span>
+          <span>Continue to database selection</span>
+          <span class="button-arrow" aria-hidden="true">→</span>
         </button>
+        <p class="privacy-note">Phase 3 is a Premium feature. Your account is verified securely by the backend before a blueprint is generated.</p>
+        <p id="formError" class="error-message" role="alert" hidden></p>
       </form>
     </section>
 
-    <section class="panel guide-panel">
-      <h2>How Phase 3 works</h2>
-      <div class="steps-grid">
-        <article class="step-card">
-          <span class="step-number">01</span>
-          <h3>Your idea</h3>
-          <p>Describe the product and its main features.</p>
+    <section class="workflow-section" aria-label="Phase 3 workflow">
+      <div class="workflow-heading">
+        <span class="section-kicker">THE BUILD PROCESS</span>
+        <h2>From description to project structure</h2>
+      </div>
+      <div class="workflow-grid">
+        <article class="workflow-card">
+          <span class="workflow-number">01</span>
+          <h3>Define the idea</h3>
+          <p>Describe the product, users, features and important workflows.</p>
         </article>
-        <article class="step-card">
-          <span class="step-number">02</span>
-          <h3>Choose a database</h3>
-          <p>Compare practical options and select the one that fits your project.</p>
+        <article class="workflow-card">
+          <span class="workflow-number">02</span>
+          <h3>Select a database</h3>
+          <p>Compare compatible options and choose the database for your project.</p>
         </article>
-        <article class="step-card">
-          <span class="step-number">03</span>
-          <h3>Get your blueprint</h3>
-          <p>Generate a folder structure and a detailed coding-agent prompt.</p>
+        <article class="workflow-card">
+          <span class="workflow-number">03</span>
+          <h3>Generate the blueprint</h3>
+          <p>Get a project folder tree and a detailed implementation prompt.</p>
         </article>
       </div>
     </section>
 
-    <section id="resultSection" class="panel result-panel hidden" aria-live="polite">
-      <div class="result-heading">
-        <div>
-          <span class="step-label">GENERATED BLUEPRINT</span>
-          <h2 id="resultTitle">Your project blueprint</h2>
+    <section id="resultSection" class="result-panel" hidden aria-live="polite" aria-busy="false">
+      <div class="panel-heading">
+        <span class="heading-icon result-heading-icon" aria-hidden="true">✧</span>
+        <div class="heading-copy">
+          <span class="section-kicker">STEP 03 / GENERATED OUTPUT</span>
+          <h2 id="resultTitle" tabindex="-1">Your project blueprint</h2>
+          <p id="resultSubtitle">Your project structure and coding-agent prompt will appear here.</p>
+        </div>
+        <span class="result-badge">PHASE 03 OUTPUT</span>
+      </div>
+
+      <div id="generationSkeleton" class="generation-skeleton" hidden>
+        <div class="loading-status" role="status" aria-live="polite">
+          <span class="loading-spinner" aria-hidden="true"></span>
+          <span class="loading-status-copy">
+            <strong>Building your project blueprint</strong>
+            <small>Organising folders, files and implementation requirements. Keep this page open.</small>
+          </span>
+          <span class="loading-label">AI BUILD IN PROGRESS</span>
+          <button id="cancelGenerationBtn" class="loading-cancel" type="button">Cancel</button>
+        </div>
+        <div class="skeleton-overview">
+          <span class="skeleton-line skeleton-overview-title"></span>
+          <span class="skeleton-line skeleton-overview-copy"></span>
+          <span class="skeleton-line skeleton-overview-copy short"></span>
+        </div>
+        <div class="skeleton-output-grid">
+          <div class="skeleton-output-card">
+            <div class="skeleton-card-header"><span class="skeleton-line short"></span><span class="skeleton-pill"></span></div>
+            <span class="skeleton-line tree-line w-80"></span>
+            <span class="skeleton-line tree-line w-64"></span>
+            <span class="skeleton-line tree-line w-72"></span>
+            <span class="skeleton-line tree-line w-54"></span>
+            <span class="skeleton-line tree-line w-76"></span>
+            <span class="skeleton-line tree-line w-60"></span>
+          </div>
+          <div class="skeleton-output-card">
+            <div class="skeleton-card-header"><span class="skeleton-line short"></span><span class="skeleton-pill"></span></div>
+            <span class="skeleton-line w-90"></span>
+            <span class="skeleton-line w-82"></span>
+            <span class="skeleton-line w-74"></span>
+            <span class="skeleton-line w-88"></span>
+            <span class="skeleton-line w-66"></span>
+            <span class="skeleton-line w-78"></span>
+          </div>
+        </div>
+      </div>
+
+      <div id="generationError" class="generation-error" role="alert" hidden>
+        <strong>We couldn't finish this blueprint.</strong>
+        <p id="generationErrorText"></p>
+        <div class="error-actions">
+          <button id="retryButton" class="secondary-button" type="button">Try again</button>
+          <button id="changeDatabaseButton" class="text-button" type="button">Change database</button>
+        </div>
+      </div>
+
+      <div id="resultContent" hidden>
+        <article class="blueprint-overview">
+          <div class="overview-topline">
+            <span class="overview-label">PROJECT OVERVIEW</span>
+            <span id="stackBadge" class="stack-badge">—</span>
+          </div>
+          <h3 id="resultProjectName">Project blueprint</h3>
           <p id="projectSummary"></p>
-        </div>
-        <span id="stackBadge" class="stack-badge"></span>
-      </div>
+        </article>
 
-      <div class="result-meta">
-        <div>
-          <span>Selected database</span>
-          <strong id="databaseResult"></strong>
+        <div class="result-meta-grid">
+          <article class="meta-card">
+            <span class="meta-label">SELECTED DATABASE</span>
+            <strong id="databaseResult">—</strong>
+          </article>
+          <article class="meta-card">
+            <span class="meta-label">PROJECT ROOT</span>
+            <strong id="rootName">—</strong>
+          </article>
+          <article class="meta-card">
+            <span class="meta-label">STRUCTURE SUMMARY</span>
+            <strong id="structureStats">—</strong>
+          </article>
         </div>
-        <div>
-          <span>Project root</span>
-          <strong id="rootName"></strong>
-        </div>
-      </div>
 
-      <div class="output-grid">
-        <section class="output-card">
-          <div class="output-card-header">
-            <div>
-              <h3>Project folder structure</h3>
-              <p>Suggested layout for your project</p>
+        <div class="output-grid">
+          <section class="output-card" aria-labelledby="treeTitle">
+            <div class="output-card-header">
+              <div>
+                <span class="output-kicker">01 / ARCHITECTURE</span>
+                <h3 id="treeTitle">Project folder structure</h3>
+                <p>Organised folders and files for your selected stack.</p>
+              </div>
+              <button id="copyTreeBtn" class="secondary-button" type="button">Copy structure</button>
             </div>
-            <button id="copyTreeBtn" class="secondary-btn" type="button">Copy structure</button>
-          </div>
-          <pre id="generatedTree" class="tree-output"></pre>
-        </section>
+            <pre id="generatedTree" class="tree-output" tabindex="0" aria-label="Generated project folder tree"></pre>
+            <p class="output-footnote">Folder paths are grouped hierarchically. Files and folders are shown separately.</p>
+          </section>
 
-        <section class="output-card">
-          <div class="output-card-header">
-            <div>
-              <h3>Master prompt</h3>
-              <p>Copy into your coding agent</p>
+          <section class="output-card prompt-card" aria-labelledby="promptTitle">
+            <div class="output-card-header">
+              <div>
+                <span class="output-kicker">02 / IMPLEMENTATION</span>
+                <h3 id="promptTitle">Master prompt</h3>
+                <p>Give this specification to your coding agent.</p>
+              </div>
+              <button id="copyPromptBtn" class="secondary-button" type="button">Copy prompt</button>
             </div>
-            <button id="copyPromptBtn" class="secondary-btn" type="button">Copy prompt</button>
-          </div>
-          <textarea id="codingPrompt" class="prompt-output" readonly spellcheck="false"></textarea>
-        </section>
-      </div>
+            <textarea id="codingPrompt" class="prompt-output" readonly spellcheck="false" aria-label="Generated coding-agent master prompt"></textarea>
+            <p class="output-footnote">Review the requirements and adjust the prompt before running your coding agent.</p>
+          </section>
+        </div>
 
-      <p id="statusMessage" class="status-message" role="status"></p>
-      <button id="startOverBtn" class="text-btn" type="button">← Build another project</button>
+        <div class="result-actions">
+          <p id="statusMessage" class="status-message" role="status">Blueprint generated successfully.</p>
+          <div class="result-action-buttons">
+            <button id="changeDatabaseResultButton" class="text-button" type="button">Change database</button>
+            <button id="startOverBtn" class="secondary-button" type="button">Build another project <span aria-hidden="true">↗</span></button>
+          </div>
+        </div>
+      </div>
     </section>
 
-    <footer>
-      <p>Phase 3 · Project planning assistant · Review generated files and security choices before deploying.</p>
-    </footer>
+    <footer class="page-footer">WEB / LAB · PHASE 03 — AI PROJECT BUILDER</footer>
   </main>
 
-  <div id="databaseModal" class="modal-backdrop hidden"
-       role="dialog" aria-modal="true" aria-labelledby="databaseTitle">
-    <section class="database-dialog">
-      <button id="closeModalBtn" class="close-btn" type="button"
-              aria-label="Close database selection">×</button>
-
-      <span class="step-label">STEP 2</span>
+  <div id="databaseModal" class="modal-backdrop" hidden>
+    <section class="database-dialog" role="dialog" aria-modal="true" aria-labelledby="databaseTitle" aria-describedby="databaseIntro" tabindex="-1">
+      <button id="closeModalBtn" class="modal-close" type="button" aria-label="Close database selection">×</button>
+      <span class="section-kicker">STEP 02 / DATABASE SELECTION</span>
       <h2 id="databaseTitle">Choose the database for your project</h2>
-      <p id="databaseIntro" class="modal-intro">
-        Compare the options below. The suggested option is a starting point, not a rule.
-      </p>
-
-      <div id="databaseCards" class="database-grid"></div>
-
+      <p id="databaseIntro" class="modal-intro">Choose a database that suits the data and workflows in your application. You can change this selection before generating.</p>
+      <div class="selected-stack-strip">
+        <span class="stack-strip-icon" aria-hidden="true">⌘</span>
+        <span>Selected stack</span>
+        <strong id="selectedFrameworkName">—</strong>
+      </div>
+      <div id="databaseRecommendation" class="database-recommendation" hidden>
+        <span class="recommendation-mark" aria-hidden="true">✧</span>
+        <div><strong id="databaseRecommendationTitle">Suggested for your idea</strong><p id="databaseRecommendationReason"></p></div>
+      </div>
+      <fieldset class="database-fieldset">
+        <legend>Available databases</legend>
+        <div id="databaseCards" class="database-grid"></div>
+      </fieldset>
       <div class="modal-footer">
-        <p id="databaseNote">You can change this selection later.</p>
-        <button id="generateBtn" class="primary-btn" type="button">
-          Generate project blueprint <span aria-hidden="true">→</span>
+        <p id="databaseNote">You can change your selection before generation.</p>
+        <button id="generateBtn" class="generate-button modal-generate-button" type="button">
+          <span aria-hidden="true">✧</span>
+          <span id="generateButtonText">Generate project blueprint</span>
+          <span class="button-arrow" aria-hidden="true">→</span>
         </button>
       </div>
     </section>
