@@ -85,7 +85,7 @@ def _read_thinking_level(name, default):
     level = raw.strip().lower()
     if level not in _VALID_THINKING_LEVELS:
         raise RuntimeError(
-            f"{name} must be one of: low, medium, high (received {raw!r})."
+            f"{name} must be one of: minimal, low, medium, high (received {raw!r})."
         )
     return level
 
@@ -1112,7 +1112,10 @@ def generate_json(
     last_error = None
     model = model or GEMINI_MODEL
     timeout_ms = timeout_ms or GEMINI_TIMEOUT_MS
-    retryable_codes = (429, 500, 502, 503, 504, 604)
+    # Do not immediately retry 429: it commonly means a quota/rate limit,
+    # and a second request will usually consume another attempt without helping.
+    # Retry transient server/capacity failures once with a short backoff.
+    retryable_codes = (500, 502, 503, 504, 604)
     max_attempts = max(1, min(int(max_attempts), 2))
 
     for attempt in range(max_attempts):
@@ -1182,11 +1185,14 @@ def generate_json(
             except (TypeError, ValueError):
                 code = None
             if code in retryable_codes and attempt + 1 < max_attempts:
+                delay_seconds = min(1.0 * (2 ** attempt), 3.0)
                 app.logger.warning(
-                    "Gemini transient API error %s; retrying once.", code
+                    "Gemini transient API error %s for model %s; "
+                    "retrying in %.1f seconds (attempt %d/%d).",
+                    code, model, delay_seconds, attempt + 1, max_attempts,
                 )
                 last_error = exc
-                time.sleep(0.6)
+                time.sleep(delay_seconds)
                 continue
             raise
 
@@ -1236,22 +1242,65 @@ def run_generation(auth, prompt, schema, temperature, max_tokens, validate,
             "error": f"The AI request timed out while generating the {label}. Please try again."
         }), 504
     except genai_errors.APIError as exc:
-        app.logger.exception("Gemini API error while generating %s", label)
         raw_code = getattr(exc, "code", None)
         try:
             code = int(raw_code)
         except (TypeError, ValueError):
             code = None
+
+        # Log the model and upstream status so Render logs reveal the real
+        # Gemini failure, without logging the user's project idea or API key.
+        app.logger.error(
+            "Gemini API failure: task=%s model=%s upstream_status=%s detail=%s",
+            label,
+            model or GEMINI_MODEL,
+            code if code is not None else "unknown",
+            str(exc)[:500],
+        )
+
         if code == 604 or "604 DEADLINE_EXCEEDED" in str(exc):
             return jsonify({
-                "error": f"Gemini took too long to generate the {label}. Please try again."
+                "error": f"Gemini timed out while generating the {label}. Please try again."
             }), 504
-        if code in (429, 503):
+
+        if code == 429:
             return jsonify({
-                "error": "The AI service is busy. Please try again in a moment."
+                "error": (
+                    "Gemini API rate limit or quota reached (HTTP 429). "
+                    "Wait before retrying, then check the Gemini API quota for your key."
+                )
+            }), 429
+
+        if code == 503:
+            return jsonify({
+                "error": (
+                    "Gemini is temporarily overloaded or unavailable (HTTP 503). "
+                    "Please retry shortly."
+                )
             }), 503
+
+        if code in (401, 403):
+            return jsonify({
+                "error": (
+                    "Gemini rejected the API key or access to the configured model. "
+                    "Check the GEMINI_API_KEY and model access in Render."
+                )
+            }), 502
+
+        if code == 404:
+            return jsonify({
+                "error": (
+                    f"The configured Gemini model '{model or GEMINI_MODEL}' was not found. "
+                    "Check GEMINI_FAST_MODEL / GEMINI_MODEL in Render."
+                )
+            }), 502
+
         return jsonify({
-            "error": f"The AI could not generate the {label}. Please try again."
+            "error": (
+                f"Gemini could not generate the {label} "
+                f"(upstream status {code if code is not None else 'unknown'}). "
+                "Check the backend logs for details."
+            )
         }), 502
     except Exception as exc:
         app.logger.exception("Unexpected error while generating %s", label)
@@ -1497,7 +1546,8 @@ def recommend_stack():
         return jsonify({"error": "Your project idea must be 3000 characters or fewer."}), 400
 
     # Cache hits cost nothing, so they are served before any quota is used.
-    cache_key = make_cache_key("recommend", GEMINI_MODEL, normalize_idea(idea))
+    # Cache by the model actually used for Phase 2, not the Phase 3/default model.
+    cache_key = make_cache_key("recommend", GEMINI_FAST_MODEL, normalize_idea(idea))
     cached = cache_get(cache_key)
     if cached is not None:
         return jsonify(cached), 200
@@ -1509,6 +1559,11 @@ def recommend_stack():
         + _RECOMMEND_PROMPT_TAIL
     )
 
+    app.logger.info(
+        "Phase 2 stack recommendation: model=%s timeout_ms=%s thinking_level=%s",
+        GEMINI_FAST_MODEL, GEMINI_FAST_TIMEOUT_MS, GEMINI_FAST_THINKING_LEVEL,
+    )
+
     return run_generation(
         auth, prompt, RECOMMENDATION_SCHEMA,
         temperature=0.8, max_tokens=3000,
@@ -1518,6 +1573,7 @@ def recommend_stack():
         thinking_level=GEMINI_FAST_THINKING_LEVEL,
         thinking_budget=GEMINI_FAST_THINKING_BUDGET,
         timeout_ms=GEMINI_FAST_TIMEOUT_MS,
+        max_attempts=2,
     )
 
 
