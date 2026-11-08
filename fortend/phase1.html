@@ -106,31 +106,81 @@
         });
       });
 
-      // Build a small project brief from the learner's answers.
+      // Generate the project brief with Gemini through the Flask backend.
       const briefForm = document.querySelector('#projectBriefForm');
       const briefOutput = document.querySelector('#briefOutput');
       if (briefForm && briefOutput) {
-        briefForm.addEventListener('submit', event => {
+        const briefSubmit = briefForm.querySelector('button[type="submit"]');
+        const defaultButtonHTML = briefSubmit ? briefSubmit.innerHTML : '';
+        const PROJECT_BRIEF_API_URL = 'https://web-dev-backend-g976.onrender.com/api/generate-project-brief';
+
+        briefForm.addEventListener('submit', async event => {
           event.preventDefault();
+          if (!briefForm.reportValidity()) return;
+
           const formData = new FormData(briefForm);
-          const project = String(formData.get('project') || '').trim();
-          const problem = String(formData.get('problem') || '').trim();
-          const audience = String(formData.get('audience') || '').trim();
-          const feature = String(formData.get('feature') || '').trim();
-          const value = String(formData.get('value') || '').trim();
-          const safe = valueText => valueText || 'Not decided yet';
-          briefOutput.innerHTML = `
-            <p class="brief-eyebrow">YOUR PROJECT BLUEPRINT</p>
-            <h3>${escapeHTML(safe(project))}</h3>
-            <dl class="brief-result-grid">
-              <div><dt>Problem</dt><dd>${escapeHTML(safe(problem))}</dd></div>
-              <div><dt>Target audience</dt><dd>${escapeHTML(safe(audience))}</dd></div>
-              <div><dt>Core feature</dt><dd>${escapeHTML(safe(feature))}</dd></div>
-              <div><dt>Value created</dt><dd>${escapeHTML(safe(value))}</dd></div>
-            </dl>
-            <p class="brief-next">Next: research existing solutions, find what they miss, then choose the simplest stack that meets your requirements.</p>`;
-          briefOutput.classList.add('has-content');
-          briefOutput.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'nearest' });
+          const payload = {
+            project: String(formData.get('project') || '').trim(),
+            problem: String(formData.get('problem') || '').trim(),
+            audience: String(formData.get('audience') || '').trim(),
+            feature: String(formData.get('feature') || '').trim(),
+            value: String(formData.get('value') || '').trim()
+          };
+
+          // The ID token is optional, but when signed in it enables the same
+          // account-based rate limit and shared daily quota used by Phase 2.
+          try {
+            const token = sessionStorage.getItem('google_id_token');
+            if (token) payload.token = token;
+          } catch (storageError) {
+            console.warn('Could not read the optional sign-in token:', storageError);
+          }
+
+          if (briefSubmit) {
+            briefSubmit.disabled = true;
+            briefSubmit.textContent = 'Generating with AI…';
+          }
+          briefOutput.classList.remove('has-content');
+          briefOutput.innerHTML = '<p class="brief-generating" role="status">Gemini is writing your project brief…</p>';
+
+          try {
+            const response = await fetch(PROJECT_BRIEF_API_URL, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload),
+              credentials: 'omit'
+            });
+
+            let result;
+            try {
+              result = await response.json();
+            } catch (parseError) {
+              throw new Error('The server returned an unreadable response. Please try again.');
+            }
+
+            if (!response.ok) {
+              throw new Error(result && result.error ? result.error : 'Project brief generation failed. Please try again.');
+            }
+            if (!result || typeof result.project_brief !== 'string' || !result.project_brief.trim()) {
+              throw new Error('Gemini returned an empty project brief. Please try again.');
+            }
+
+            const safeBrief = escapeHTML(result.project_brief.trim()).replace(/\r?\n/g, '<br>');
+            briefOutput.innerHTML = `
+              <p class="brief-eyebrow">AI-GENERATED PROJECT BRIEF</p>
+              <div class="ai-project-brief">${safeBrief}</div>`;
+            briefOutput.classList.add('has-content');
+            briefOutput.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'nearest' });
+          } catch (error) {
+            console.error('Project brief generation failed:', error);
+            briefOutput.innerHTML = `<p class="brief-generation-error">${escapeHTML(error.message || 'Unable to generate the project brief. Please try again.')}</p>`;
+            briefOutput.classList.add('has-content');
+          } finally {
+            if (briefSubmit) {
+              briefSubmit.disabled = false;
+              briefSubmit.innerHTML = defaultButtonHTML;
+            }
+          }
         });
       }
 
@@ -552,7 +602,7 @@
           <label class="field-label" for="projectValue">05. What value will it create?</label>
           <textarea id="projectValue" name="value" rows="2" placeholder="How will it make something easier or better?" maxlength="240"></textarea>
 
-          <button class="button button-primary brief-submit" type="submit">Create my project brief <span aria-hidden="true">↗</span></button>
+          <button class="button button-primary brief-submit" type="submit">Generate project brief <span aria-hidden="true">↗</span></button>
         </form>
 
         <div class="brief-output" id="briefOutput" aria-live="polite">

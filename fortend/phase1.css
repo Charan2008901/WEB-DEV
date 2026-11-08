@@ -1339,3 +1339,34 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   .float-chip, .layer-toggle, .nav-links { background-color: rgba(255,255,255,.88); }
 }
 @media (prefers-reduced-motion: reduce) { body { background-attachment: scroll; } }
+
+
+/* Phase 1 Gemini project-brief output states. */
+.brief-output.has-content {
+  align-items: stretch;
+  justify-content: flex-start;
+  text-align: left;
+}
+.ai-project-brief {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  color: var(--text);
+  font: 500 12px/1.9 var(--font-body);
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+.brief-generating,
+.brief-generation-error {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  color: var(--muted);
+  font: 600 11px/1.8 var(--font-body);
+}
+.brief-generation-error { color: #A83218; }
+.brief-submit:disabled {
+  opacity: .72;
+  cursor: wait;
+  transform: none;
+}
