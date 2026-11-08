@@ -1,20 +1,24 @@
 """
 WEB-DEV backend (hardened + faster rewrite).
 
-Run in production with a threaded worker (calls to Gemini are I/O bound):
-    gunicorn app:app -k gthread -w 2 --threads 8 --timeout 60
+Run in production with a threaded worker (Gemini calls are I/O-bound):
+    gunicorn app:app -k gthread -w 2 --threads 8 --timeout 120
 
 Environment variables:
     GOOGLE_CLIENT_ID, GEMINI_API_KEY      required
     REDIS_URL                             strongly recommended in production
-    GEMINI_MODEL                          default below
-    GEMINI_FAST_MODEL                     model for brief/recommendation (e.g. a flash-lite model)
-    GEMINI_FAST_THINKING_BUDGET           default 0 (thinking off) for brief/recommendation
-    GEMINI_THINKING_BUDGET                optional, for the Phase 3 structure call
-    GEMINI_TIMEOUT_SECONDS                default 40
+    GEMINI_MODEL                          default gemini-3.8-flash
+    GEMINI_FAST_MODEL                     optional model for brief/recommendation
+    GEMINI_FAST_THINKING_LEVEL            low / medium / high (default low)
+    GEMINI_THINKING_LEVEL                 low / medium / high (default medium)
+    GEMINI_FAST_TIMEOUT_SECONDS           per-attempt timeout (default 25)
+    GEMINI_TIMEOUT_SECONDS                per-attempt timeout for Phase 3 (default 45)
     TRUSTED_PROXY_COUNT                   proxy hops in front of the app (Render: 1)
     CORS_ORIGINS                          comma-separated allowed origins
     DAILY_USER_LIMIT / DAILY_ANON_LIMIT   default 20 / 20
+
+For Gemini 3.x, this file uses thinking_level and omits deprecated sampling
+parameters. Legacy thinking-budget variables are retained only for older models.
 """
 
 import hashlib
@@ -60,13 +64,54 @@ except ImportError:  # pragma: no cover
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
-# Fast model + no "thinking" for short writing tasks (brief / recommendation).
 GEMINI_FAST_MODEL = os.getenv("GEMINI_FAST_MODEL") or GEMINI_MODEL
-_fb = os.getenv("GEMINI_FAST_THINKING_BUDGET", "0")
-GEMINI_FAST_THINKING_BUDGET = int(_fb) if _fb != "" else None
-GEMINI_TIMEOUT_MS = int(float(os.getenv("GEMINI_TIMEOUT_SECONDS", "40")) * 1000)
-_tb = os.getenv("GEMINI_THINKING_BUDGET")
-GEMINI_THINKING_BUDGET = int(_tb) if _tb not in (None, "") else None
+
+_VALID_THINKING_LEVELS = {"low", "medium", "high"}
+
+
+def _read_thinking_level(name, default):
+    raw = os.getenv(name, default)
+    if raw is None or not raw.strip():
+        return None
+    level = raw.strip().lower()
+    if level not in _VALID_THINKING_LEVELS:
+        raise RuntimeError(
+            f"{name} must be one of: low, medium, high (received {raw!r})."
+        )
+    return level
+
+
+# Gemini 3.8 Flash supports thinking_level (not thinking_budget).
+GEMINI_FAST_THINKING_LEVEL = _read_thinking_level(
+    "GEMINI_FAST_THINKING_LEVEL", "low"
+)
+GEMINI_THINKING_LEVEL = _read_thinking_level(
+    "GEMINI_THINKING_LEVEL", "medium"
+)
+
+# Per-attempt HTTP timeouts. Fast tasks get a shorter budget; Phase 3 has
+# more output and gets longer. One bounded retry is allowed for transient errors.
+GEMINI_FAST_TIMEOUT_MS = int(
+    float(os.getenv("GEMINI_FAST_TIMEOUT_SECONDS", "25")) * 1000
+)
+GEMINI_TIMEOUT_MS = int(
+    float(os.getenv("GEMINI_TIMEOUT_SECONDS", "45")) * 1000
+)
+
+# Backward compatibility for older Gemini models (e.g. Gemini 2.5).
+# These budgets are deliberately not sent to Gemini 3.x models.
+_legacy_fast_budget = os.getenv("GEMINI_FAST_THINKING_BUDGET")
+GEMINI_FAST_THINKING_BUDGET = (
+    int(_legacy_fast_budget)
+    if _legacy_fast_budget not in (None, "")
+    else None
+)
+_legacy_budget = os.getenv("GEMINI_THINKING_BUDGET")
+GEMINI_THINKING_BUDGET = (
+    int(_legacy_budget)
+    if _legacy_budget not in (None, "")
+    else None
+)
 
 REDIS_URL = os.getenv("REDIS_URL")
 TRUSTED_PROXY_COUNT = int(os.getenv("TRUSTED_PROXY_COUNT", "1"))
@@ -78,7 +123,7 @@ MAX_ENTRIES = 60
 MAX_DEPTH = 10
 CLOCK_SKEW_SECONDS = 10
 CACHE_TTL_SECONDS = 86400
-PROMPT_VERSION = "v2"
+PROMPT_VERSION = "v3"
 
 CORS_ORIGINS = [
     o.strip()
@@ -981,83 +1026,153 @@ class AIOutputError(Exception):
     """The model returned something unusable (empty, invalid, or off-schema)."""
 
 
-_client = None
+_clients = {}
 _client_lock = threading.Lock()
 
 
-def get_client():
-    global _client
-    if _client is None:
-        with _client_lock:
-            if _client is None:
-                _client = genai.Client(
-                    api_key=GEMINI_API_KEY,
-                    http_options=genai.types.HttpOptions(timeout=GEMINI_TIMEOUT_MS),
-                )
-    return _client
+def get_client(timeout_ms=GEMINI_TIMEOUT_MS):
+    """Return a shared Gemini client configured for this request timeout."""
+    timeout_ms = int(timeout_ms or GEMINI_TIMEOUT_MS)
+    with _client_lock:
+        client = _clients.get(timeout_ms)
+        if client is None:
+            client = genai.Client(
+                api_key=GEMINI_API_KEY,
+                http_options=genai.types.HttpOptions(timeout=timeout_ms),
+            )
+            _clients[timeout_ms] = client
+        return client
 
 
-def _gen_config(schema, temperature, max_tokens, thinking_budget=None):
+def _is_gemini_3_model(model):
+    return str(model or "").strip().lower().startswith("gemini-3")
+
+
+def _gen_config(
+    schema,
+    temperature,
+    max_tokens,
+    model,
+    thinking_level=None,
+    thinking_budget=None,
+):
+    """Build a model-version-aware GenerateContent config.
+
+    Gemini 3.x uses thinking_level and does not receive deprecated sampling
+    parameters. Older models retain temperature and optional thinking_budget.
+    """
     config = {
         "response_mime_type": "application/json",
         "response_json_schema": schema,
-        "temperature": temperature,
         "max_output_tokens": max_tokens,
     }
-    if thinking_budget is not None:
-        config["thinking_config"] = {"thinking_budget": thinking_budget}
+
+    if _is_gemini_3_model(model):
+        if thinking_level:
+            config["thinking_config"] = {"thinking_level": thinking_level}
+    else:
+        if temperature is not None:
+            config["temperature"] = temperature
+        if thinking_budget is not None:
+            config["thinking_config"] = {"thinking_budget": thinking_budget}
+
     return config
 
 
-def generate_json(prompt, schema, temperature, max_tokens, validate,
-                  model=None, thinking_budget=GEMINI_THINKING_BUDGET):
-    """Call Gemini and validate the result. Retries once on a bad output or a
-    transient API error, so most one-off failures never reach the user."""
+def generate_json(
+    prompt,
+    schema,
+    temperature,
+    max_tokens,
+    validate,
+    model=None,
+    thinking_level=None,
+    thinking_budget=None,
+    timeout_ms=None,
+):
+    """Call Gemini, validate structured JSON, and retry one transient failure.
+
+    A 604 DEADLINE_EXCEEDED from Gemini is treated as transient and retried
+    once. The bounded retry prevents indefinite request loops.
+    """
     last_error = None
     model = model or GEMINI_MODEL
+    timeout_ms = timeout_ms or GEMINI_TIMEOUT_MS
+    retryable_codes = (429, 500, 502, 503, 504, 604)
+
     for attempt in range(2):
+        active_level = thinking_level
+        active_budget = thinking_budget
         try:
+            config = _gen_config(
+                schema, temperature, max_tokens, model,
+                active_level, active_budget,
+            )
             try:
-                response = get_client().models.generate_content(
+                response = get_client(timeout_ms).models.generate_content(
                     model=model,
                     contents=prompt,
-                    config=_gen_config(schema, temperature, max_tokens, thinking_budget),
+                    config=config,
                 )
             except genai_errors.APIError as exc:
-                # Some models reject a thinking budget; retry once without it.
-                if thinking_budget is not None and getattr(exc, "code", None) == 400:
-                    app.logger.warning("Model rejected thinking config; retrying without it.")
-                    thinking_budget = None
-                    response = get_client().models.generate_content(
+                # If the API rejects a thinking setting, retry this attempt
+                # once without that setting. Do not strip other config fields.
+                if (
+                    getattr(exc, "code", None) == 400
+                    and (active_level is not None or active_budget is not None)
+                ):
+                    app.logger.warning(
+                        "Gemini model rejected the thinking setting; retrying without it."
+                    )
+                    config = _gen_config(
+                        schema, temperature, max_tokens, model, None, None
+                    )
+                    response = get_client(timeout_ms).models.generate_content(
                         model=model,
                         contents=prompt,
-                        config=_gen_config(schema, temperature, max_tokens, None),
+                        config=config,
                     )
                 else:
                     raise
-            text = response.text
-            if not text:
+
+            response_text = response.text
+            if not response_text:
                 reason = (
                     response.candidates[0].finish_reason
                     if response.candidates else "no candidates"
                 )
-                raise AIOutputError(f"empty response (finish reason: {reason})")
+                raise AIOutputError(
+                    f"empty response (finish reason: {reason})"
+                )
+
             try:
-                data = json.loads(text)
+                data = json.loads(response_text)
             except ValueError as exc:
-                raise AIOutputError(f"invalid JSON: {text[:300]!r}") from exc
+                raise AIOutputError(
+                    f"invalid JSON: {response_text[:300]!r}"
+                ) from exc
+
             return validate(data)
+
         except AIOutputError as exc:
-            app.logger.warning("AI output rejected (attempt %d): %s", attempt + 1, exc)
+            app.logger.warning(
+                "AI output rejected (attempt %d): %s", attempt + 1, exc
+            )
             last_error = exc
+
         except genai_errors.APIError as exc:
-            if getattr(exc, "code", None) in (429, 500, 502, 503, 504) and attempt == 0:
-                app.logger.warning("Gemini transient error %s; retrying once.", exc.code)
-                time.sleep(0.6)
+            code = getattr(exc, "code", None)
+            if code in retryable_codes and attempt == 0:
+                app.logger.warning(
+                    "Gemini transient API error %s; retrying once.", code
+                )
                 last_error = exc
+                time.sleep(0.6)
                 continue
             raise
+
     raise last_error
+
 
 
 def quota_for(auth):
@@ -1068,7 +1183,8 @@ def quota_for(auth):
 
 def run_generation(auth, prompt, schema, temperature, max_tokens, validate,
                    cache_key=None, label="result", model=None,
-                   thinking_budget=GEMINI_THINKING_BUDGET):
+                   thinking_level=None, thinking_budget=None,
+                   timeout_ms=None):
     """Reserve quota -> call Gemini -> refund quota if anything fails."""
     if not GEMINI_API_KEY:
         app.logger.error("GEMINI_API_KEY is not configured.")
@@ -1083,17 +1199,36 @@ def run_generation(auth, prompt, schema, temperature, max_tokens, validate,
 
     succeeded = False
     try:
-        result = generate_json(prompt, schema, temperature, max_tokens, validate,
-                               model=model, thinking_budget=thinking_budget)
+        result = generate_json(
+            prompt, schema, temperature, max_tokens, validate,
+            model=model,
+            thinking_level=thinking_level,
+            thinking_budget=thinking_budget,
+            timeout_ms=timeout_ms,
+        )
         succeeded = True
     except AIOutputError:
         app.logger.exception("Gemini produced an unusable %s", label)
         return jsonify({"error": f"The AI returned an incomplete {label}. Please try again."}), 502
+    except TimeoutError:
+        app.logger.exception("Gemini client timeout while generating %s", label)
+        return jsonify({
+            "error": f"The AI request timed out while generating the {label}. Please try again."
+        }), 504
     except genai_errors.APIError as exc:
         app.logger.exception("Gemini API error while generating %s", label)
-        if getattr(exc, "code", None) in (429, 503):
-            return jsonify({"error": "The AI service is busy. Please try again in a moment."}), 503
-        return jsonify({"error": f"The AI could not generate the {label}. Please try again."}), 502
+        code = getattr(exc, "code", None)
+        if code == 604:
+            return jsonify({
+                "error": f"Gemini took too long to generate the {label}. Please try again."
+            }), 504
+        if code in (429, 503):
+            return jsonify({
+                "error": "The AI service is busy. Please try again in a moment."
+            }), 503
+        return jsonify({
+            "error": f"The AI could not generate the {label}. Please try again."
+        }), 502
     except Exception:
         app.logger.exception("Unexpected error while generating %s", label)
         return jsonify({"error": f"The AI could not generate the {label}. Please try again."}), 502
@@ -1152,6 +1287,14 @@ def generate_project_brief():
         return jsonify({"error": "The value field must be 240 characters or fewer."}), 400
     inputs["value"] = optional_value
 
+    # Exact repeated worksheet submissions are served from cache before
+    # consuming quota or calling Gemini, matching the Phase 2/3 behavior.
+    cache_payload = json.dumps(inputs, ensure_ascii=False, sort_keys=True)
+    cache_key = make_cache_key("brief", GEMINI_FAST_MODEL, cache_payload)
+    cached = cache_get(cache_key)
+    if cached is not None:
+        return jsonify(cached), 200
+
     prompt = (
         "You are a professional product brief writer for a beginner web-development learning platform.\n\n"
         "TASK:\nWrite one concise, clear project brief using only the user's worksheet details.\n\n"
@@ -1170,9 +1313,13 @@ def generate_project_brief():
 
     return run_generation(
         auth, prompt, PROJECT_BRIEF_SCHEMA,
-        temperature=0.45, max_tokens=800,
-        validate=validate_brief, label="project brief",
-        model=GEMINI_FAST_MODEL, thinking_budget=GEMINI_FAST_THINKING_BUDGET,
+        temperature=None, max_tokens=500,
+        validate=validate_brief, cache_key=cache_key,
+        label="project brief",
+        model=GEMINI_FAST_MODEL,
+        thinking_level=GEMINI_FAST_THINKING_LEVEL,
+        thinking_budget=GEMINI_FAST_THINKING_BUDGET,
+        timeout_ms=GEMINI_FAST_TIMEOUT_MS,
     )
 
 
@@ -1334,7 +1481,10 @@ def recommend_stack():
         temperature=0.8, max_tokens=3000,
         validate=validate_recommendation, cache_key=cache_key,
         label="recommendation",
-        model=GEMINI_FAST_MODEL, thinking_budget=GEMINI_FAST_THINKING_BUDGET,
+        model=GEMINI_FAST_MODEL,
+        thinking_level=GEMINI_FAST_THINKING_LEVEL,
+        thinking_budget=GEMINI_FAST_THINKING_BUDGET,
+        timeout_ms=GEMINI_FAST_TIMEOUT_MS,
     )
 
 
@@ -1547,6 +1697,9 @@ def generate_folder_structure():
         temperature=0.2, max_tokens=8000,
         validate=validate, cache_key=cache_key,
         label="folder structure",
+        thinking_level=GEMINI_THINKING_LEVEL,
+        thinking_budget=GEMINI_THINKING_BUDGET,
+        timeout_ms=GEMINI_TIMEOUT_MS,
     )
 
 
