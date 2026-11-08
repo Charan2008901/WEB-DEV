@@ -8,7 +8,10 @@ Environment variables:
     GOOGLE_CLIENT_ID, GEMINI_API_KEY      required
     REDIS_URL                             strongly recommended in production
     GEMINI_MODEL                          default gemini-3.8-flash
-    GEMINI_FAST_MODEL                     optional model for brief/recommendation
+    GEMINI_FAST_MODEL                     optional model for Phase 2 recommendations
+    GEMINI_BRIEF_MODEL                    default gemini-3.5-flash-lite for Phase 1
+    GEMINI_BRIEF_TIMEOUT_SECONDS          default 30; one attempt for Phase 1
+    GEMINI_BRIEF_THINKING_LEVEL           default minimal for Phase 1
     GEMINI_FAST_THINKING_LEVEL            low / medium / high (default low)
     GEMINI_THINKING_LEVEL                 low / medium / high (default medium)
     GEMINI_FAST_TIMEOUT_SECONDS           per-attempt timeout (default 25)
@@ -65,8 +68,14 @@ GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
 GEMINI_FAST_MODEL = os.getenv("GEMINI_FAST_MODEL") or GEMINI_MODEL
+# Phase 1 is a short writing task: use Google's low-latency Flash-Lite model.
+# This is deliberately separate so Phase 2 and Phase 3 keep their current models.
+GEMINI_BRIEF_MODEL = os.getenv("GEMINI_BRIEF_MODEL", "gemini-3.5-flash-lite")
+GEMINI_BRIEF_TIMEOUT_MS = int(
+    float(os.getenv("GEMINI_BRIEF_TIMEOUT_SECONDS", "30")) * 1000
+)
 
-_VALID_THINKING_LEVELS = {"low", "medium", "high"}
+_VALID_THINKING_LEVELS = {"minimal", "low", "medium", "high"}
 
 
 def _read_thinking_level(name, default):
@@ -81,7 +90,10 @@ def _read_thinking_level(name, default):
     return level
 
 
-# Gemini 3.8 Flash supports thinking_level (not thinking_budget).
+# Gemini 3.x uses thinking_level (not thinking_budget). Flash-Lite supports minimal.
+GEMINI_BRIEF_THINKING_LEVEL = _read_thinking_level(
+    "GEMINI_BRIEF_THINKING_LEVEL", "minimal"
+)
 GEMINI_FAST_THINKING_LEVEL = _read_thinking_level(
     "GEMINI_FAST_THINKING_LEVEL", "low"
 )
@@ -1089,18 +1101,21 @@ def generate_json(
     thinking_level=None,
     thinking_budget=None,
     timeout_ms=None,
+    max_attempts=2,
 ):
-    """Call Gemini, validate structured JSON, and retry one transient failure.
+    """Call Gemini and validate the result with a bounded retry policy.
 
-    A 604 DEADLINE_EXCEEDED from Gemini is treated as transient and retried
-    once. The bounded retry prevents indefinite request loops.
+    The caller controls the attempt count. Phase 1 uses one attempt because a
+    repeated deadline-exceeded request only doubles latency; the existing
+    Phase 2/3 retry policy remains unchanged.
     """
     last_error = None
     model = model or GEMINI_MODEL
     timeout_ms = timeout_ms or GEMINI_TIMEOUT_MS
     retryable_codes = (429, 500, 502, 503, 504, 604)
+    max_attempts = max(1, min(int(max_attempts), 2))
 
-    for attempt in range(2):
+    for attempt in range(max_attempts):
         active_level = thinking_level
         active_budget = thinking_budget
         try:
@@ -1161,8 +1176,12 @@ def generate_json(
             last_error = exc
 
         except genai_errors.APIError as exc:
-            code = getattr(exc, "code", None)
-            if code in retryable_codes and attempt == 0:
+            raw_code = getattr(exc, "code", None)
+            try:
+                code = int(raw_code)
+            except (TypeError, ValueError):
+                code = None
+            if code in retryable_codes and attempt + 1 < max_attempts:
                 app.logger.warning(
                     "Gemini transient API error %s; retrying once.", code
                 )
@@ -1184,7 +1203,7 @@ def quota_for(auth):
 def run_generation(auth, prompt, schema, temperature, max_tokens, validate,
                    cache_key=None, label="result", model=None,
                    thinking_level=None, thinking_budget=None,
-                   timeout_ms=None):
+                   timeout_ms=None, max_attempts=2):
     """Reserve quota -> call Gemini -> refund quota if anything fails."""
     if not GEMINI_API_KEY:
         app.logger.error("GEMINI_API_KEY is not configured.")
@@ -1205,6 +1224,7 @@ def run_generation(auth, prompt, schema, temperature, max_tokens, validate,
             thinking_level=thinking_level,
             thinking_budget=thinking_budget,
             timeout_ms=timeout_ms,
+            max_attempts=max_attempts,
         )
         succeeded = True
     except AIOutputError:
@@ -1217,8 +1237,12 @@ def run_generation(auth, prompt, schema, temperature, max_tokens, validate,
         }), 504
     except genai_errors.APIError as exc:
         app.logger.exception("Gemini API error while generating %s", label)
-        code = getattr(exc, "code", None)
-        if code == 604:
+        raw_code = getattr(exc, "code", None)
+        try:
+            code = int(raw_code)
+        except (TypeError, ValueError):
+            code = None
+        if code == 604 or "604 DEADLINE_EXCEEDED" in str(exc):
             return jsonify({
                 "error": f"Gemini took too long to generate the {label}. Please try again."
             }), 504
@@ -1229,8 +1253,12 @@ def run_generation(auth, prompt, schema, temperature, max_tokens, validate,
         return jsonify({
             "error": f"The AI could not generate the {label}. Please try again."
         }), 502
-    except Exception:
+    except Exception as exc:
         app.logger.exception("Unexpected error while generating %s", label)
+        if "604 DEADLINE_EXCEEDED" in str(exc):
+            return jsonify({
+                "error": f"Gemini took too long to generate the {label}. Please try again."
+            }), 504
         return jsonify({"error": f"The AI could not generate the {label}. Please try again."}), 502
     finally:
         if not succeeded:
@@ -1290,7 +1318,7 @@ def generate_project_brief():
     # Exact repeated worksheet submissions are served from cache before
     # consuming quota or calling Gemini, matching the Phase 2/3 behavior.
     cache_payload = json.dumps(inputs, ensure_ascii=False, sort_keys=True)
-    cache_key = make_cache_key("brief", GEMINI_FAST_MODEL, cache_payload)
+    cache_key = make_cache_key("brief", GEMINI_BRIEF_MODEL, cache_payload)
     cached = cache_get(cache_key)
     if cached is not None:
         return jsonify(cached), 200
@@ -1311,15 +1339,20 @@ def generate_project_brief():
         "WORKSHEET DATA (JSON):\n" + json.dumps(inputs, ensure_ascii=False)
     )
 
+    app.logger.info(
+        "Phase 1 project brief request: model=%s, timeout_ms=%s, thinking_level=%s",
+        GEMINI_BRIEF_MODEL, GEMINI_BRIEF_TIMEOUT_MS, GEMINI_BRIEF_THINKING_LEVEL,
+    )
     return run_generation(
         auth, prompt, PROJECT_BRIEF_SCHEMA,
-        temperature=None, max_tokens=500,
+        temperature=None, max_tokens=350,
         validate=validate_brief, cache_key=cache_key,
         label="project brief",
-        model=GEMINI_FAST_MODEL,
-        thinking_level=GEMINI_FAST_THINKING_LEVEL,
-        thinking_budget=GEMINI_FAST_THINKING_BUDGET,
-        timeout_ms=GEMINI_FAST_TIMEOUT_MS,
+        model=GEMINI_BRIEF_MODEL,
+        thinking_level=GEMINI_BRIEF_THINKING_LEVEL,
+        thinking_budget=None,
+        timeout_ms=GEMINI_BRIEF_TIMEOUT_MS,
+        max_attempts=1,
     )
 
 
