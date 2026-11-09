@@ -1,0 +1,969 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#F3EEE3">
+  <meta name="description" content="WEB / LAB Phase 4 — AI-powered development and application security workspace.">
+  <title>Phase 4 — AI Development Workspace | WEB / LAB</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700;800&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="./phase4.css">
+  <script src="./phase4.js" defer></script>
+</head>
+
+<body>
+  <div class="app-shell">
+
+    <!-- TOP NAVIGATION -->
+    <header class="topbar">
+
+      <a class="brand-lockup" href="./index.html" aria-label="WEB / LAB home">
+        <span class="brand-mark" aria-hidden="true">W<span>/</span>L</span>
+        <span class="brand-copy">
+          <strong>WEB / LAB</strong>
+          <small>BUILD WITH INTENTION</small>
+        </span>
+      </a>
+
+      <div class="topbar-context">
+        <span class="crumb-muted">WORKSPACE</span>
+        <span class="crumb-divider">/</span>
+        <strong>PHASE 04</strong>
+        <span class="phase-chip">
+          <span class="status-dot"></span>
+          AI DEVELOPMENT
+        </span>
+      </div>
+
+      <div class="topbar-actions">
+
+        <span id="connectionStatus" class="connection-state" role="status">
+          <span class="status-dot"></span>
+          Connecting
+        </span>
+
+        <a class="topbar-link" href="./phase-3.html" title="Return to Phase 3">
+          Phase 3
+        </a>
+
+        <button id="refreshProjectBtn" class="icon-button" type="button" aria-label="Reload project" title="Reload project">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M20 7v5h-5M4 17v-5h5"/>
+            <path d="M5.6 9A7 7 0 0 1 18 6.5L20 12M4 12l2 5.5A7 7 0 0 0 18.4 15"/>
+          </svg>
+        </button>
+
+        <div class="avatar" aria-label="Signed-in user">WL</div>
+      </div>
+    </header>
+
+    <div class="workspace-frame">
+
+      <!-- SIDEBAR -->
+      <aside class="sidebar" aria-label="Workspace navigation">
+
+        <div class="sidebar-project-card">
+          <div class="project-monogram" id="projectMonogram">—</div>
+
+          <div class="sidebar-project-copy">
+            <span class="sidebar-eyebrow">CURRENT PROJECT</span>
+            <strong id="sidebarProjectName">No project loaded</strong>
+            <small id="sidebarProjectStack">Open a Phase 3 blueprint</small>
+          </div>
+
+          <span id="projectLoadBadge" class="tiny-badge">WAITING</span>
+        </div>
+
+        <p class="nav-label">WORKSPACE</p>
+
+        <nav class="primary-nav" aria-label="Phase 4 sections">
+
+          <button class="nav-item is-active" type="button" data-view="build" aria-current="page">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="m8 8-4 4 4 4M16 8l4 4-4 4M14 5l-4 14"/>
+            </svg>
+            <span>AI Developer</span>
+            <kbd>01</kbd>
+          </button>
+
+          <button class="nav-item" type="button" data-view="files">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M3.5 6.5h7l2 2h8v10.5H3.5z"/>
+              <path d="M3.5 6.5V5h7l2 2"/>
+            </svg>
+            <span>Project files</span>
+            <kbd>02</kbd>
+          </button>
+
+          <button class="nav-item" type="button" data-view="security">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 3 20 6v5.5c0 4.5-3.1 7.6-8 9.5-4.9-1.9-8-5-8-9.5V6z"/>
+              <path d="m8.5 12 2.2 2.2 4.8-5"/>
+            </svg>
+            <span>Security center</span>
+            <kbd>03</kbd>
+          </button>
+
+          <button class="nav-item" type="button" data-view="reports">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M6 3.5h8l4 4v13H6z"/>
+              <path d="M14 3.5v4h4M9 12h6M9 15.5h6"/>
+            </svg>
+            <span>Reports & activity</span>
+            <kbd>04</kbd>
+          </button>
+
+        </nav>
+
+        <div class="sidebar-divider"></div>
+
+        <p class="nav-label">PROJECT STATUS</p>
+
+        <div class="sidebar-status-list">
+          <div>
+            <span class="status-indicator muted"></span>
+            <span>Blueprint</span>
+            <strong id="sidebarBlueprintStatus">Not loaded</strong>
+          </div>
+
+          <div>
+            <span class="status-indicator muted"></span>
+            <span>Code generation</span>
+            <strong id="sidebarBuildStatus">Not started</strong>
+          </div>
+
+          <div>
+            <span class="status-indicator muted"></span>
+            <span>Security scan</span>
+            <strong id="sidebarScanStatus">Not tested</strong>
+          </div>
+        </div>
+
+        <div class="sidebar-spacer"></div>
+
+        <div class="sidebar-help-card">
+          <span class="help-icon" aria-hidden="true">✳</span>
+          <strong>Build responsibly.</strong>
+          <p>Review generated changes and verify security fixes before deployment.</p>
+          <a href="https://owasp.org/Top10/2025/" target="_blank" rel="noopener noreferrer">
+            Security reference <span aria-hidden="true">↗</span>
+          </a>
+        </div>
+
+        <div class="sidebar-footer">
+          WEB / LAB <span>·</span> PHASE 04
+        </div>
+
+      </aside>
+
+      <!-- MAIN WORKSPACE -->
+      <main class="main-content" id="mainContent">
+
+        <!-- EMPTY PROJECT STATE -->
+        <section id="emptyProjectState" class="empty-project-state" hidden aria-labelledby="emptyTitle">
+
+          <div class="empty-orbit empty-orbit-one" aria-hidden="true"></div>
+          <div class="empty-orbit empty-orbit-two" aria-hidden="true"></div>
+
+          <span class="section-kicker">PHASE 04 / PROJECT HANDOFF</span>
+
+          <div class="empty-icon">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 7.5h6l2 2h8v9H4z"/>
+              <path d="M8 13h8M8 16h5"/>
+            </svg>
+          </div>
+
+          <h1 id="emptyTitle">
+            Your workspace is<br>
+            <em>ready for a project.</em>
+          </h1>
+
+          <p>
+            Phase 4 continues from a blueprint created in Phase 3.
+            Return to Phase 3, generate your project blueprint,
+            then use its <strong>Continue to Phase 4</strong> action.
+          </p>
+
+          <div class="empty-actions">
+            <a class="primary-button" href="./phase-3.html">
+              Go to Phase 3 <span aria-hidden="true">→</span>
+            </a>
+
+            <button id="retryLoadBtn" class="quiet-button" type="button">
+              Try loading again
+            </button>
+          </div>
+
+          <div class="empty-meta">
+            <span class="status-dot"></span>
+            Project data will be loaded securely from the backend using its project ID.
+          </div>
+
+          <p id="emptyError" class="inline-error" role="alert" hidden></p>
+
+        </section>
+
+        <!-- PROJECT WORKSPACE -->
+        <div id="workspaceContent" hidden>
+
+          <!-- PROJECT HEADING -->
+          <section class="workspace-heading">
+
+            <div>
+              <div class="section-kicker">
+                YOUR BUILD ENVIRONMENT
+                <span class="kicker-line"></span>
+                04 / 04
+              </div>
+
+              <h1>
+                From blueprint to <em>working software.</em>
+              </h1>
+
+              <p>
+                Generate the application, inspect its files,
+                and assess its security from one workspace.
+              </p>
+            </div>
+
+            <div class="heading-actions">
+
+              <span id="projectOrigin" class="origin-pill">
+                <span class="origin-dot"></span>
+                PHASE 3 BLUEPRINT
+              </span>
+
+              <button id="exportProjectBtn" class="outline-button" type="button" disabled>
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M12 3v12M7 10l5 5 5-5M4 20h16"/>
+                </svg>
+                Export project
+              </button>
+
+            </div>
+          </section>
+
+          <!-- PROJECT SUMMARY -->
+          <section class="project-summary glass-panel" aria-label="Current project summary">
+
+            <div class="summary-main">
+              <div class="summary-project-icon" id="summaryProjectIcon">PR</div>
+
+              <div class="summary-project-copy">
+                <span class="summary-label">CURRENT PROJECT</span>
+                <h2 id="projectName">Loading project…</h2>
+                <p id="projectDescription">Loading the saved Phase 3 blueprint.</p>
+              </div>
+            </div>
+
+            <div class="summary-facts">
+              <div>
+                <span>FRAMEWORK</span>
+                <strong id="projectFramework">—</strong>
+              </div>
+
+              <div>
+                <span>DATABASE</span>
+                <strong id="projectDatabase">—</strong>
+              </div>
+
+              <div>
+                <span>PROJECT FILES</span>
+                <strong id="projectFileCount">—</strong>
+              </div>
+            </div>
+
+            <div class="summary-state">
+              <span id="projectStateDot" class="status-dot muted"></span>
+              <span id="projectStateText">Blueprint imported</span>
+            </div>
+
+          </section>
+
+          <!-- WORKSPACE TABS -->
+          <div class="workspace-tabs" role="tablist" aria-label="Workspace views">
+
+            <button class="workspace-tab is-active" id="tab-build" type="button" role="tab" aria-selected="true" aria-controls="view-build" data-view="build">
+              <span class="tab-index">01</span> Build
+            </button>
+
+            <button class="workspace-tab" id="tab-files" type="button" role="tab" aria-selected="false" aria-controls="view-files" data-view="files">
+              <span class="tab-index">02</span> Files
+            </button>
+
+            <button class="workspace-tab" id="tab-security" type="button" role="tab" aria-selected="false" aria-controls="view-security" data-view="security">
+              <span class="tab-index">03</span> Security
+            </button>
+
+            <button class="workspace-tab" id="tab-reports" type="button" role="tab" aria-selected="false" aria-controls="view-reports" data-view="reports">
+              <span class="tab-index">04</span> Reports
+            </button>
+
+          </div>
+
+          <!-- ==========================================
+               BUILD VIEW
+          =========================================== -->
+          <section id="view-build" class="view-panel is-visible" data-panel="build" role="tabpanel" aria-labelledby="tab-build">
+
+            <div class="build-layout">
+
+              <div class="build-main-column">
+
+                <section class="panel-card developer-card">
+
+                  <div class="panel-heading-row">
+
+                    <div class="panel-title-group">
+                      <span class="panel-icon orange-icon">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                          <path d="m8 8-4 4 4 4M16 8l4 4-4 4M14 5l-4 14"/>
+                        </svg>
+                      </span>
+
+                      <div>
+                        <span class="section-kicker">GEMINI-POWERED DEVELOPMENT</span>
+                        <h2>Tell your agent what to build.</h2>
+                      </div>
+                    </div>
+
+                    <span class="provider-tag">
+                      <span class="provider-spark">✦</span>
+                      GEMINI API
+                    </span>
+
+                  </div>
+
+                  <p class="panel-intro">
+                    Your Phase 3 blueprint is the project context.
+                    Describe the next implementation task or ask
+                    the agent to build the full application.
+                  </p>
+
+                  <div class="context-strip">
+
+                    <div class="context-strip-icon">
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M4 7.5h6l2 2h8v9H4z"/>
+                      </svg>
+                    </div>
+
+                    <div>
+                      <strong>Using Phase 3 blueprint</strong>
+                      <small id="blueprintContext">
+                        Project idea, stack, database and folder structure will be supplied.
+                      </small>
+                    </div>
+
+                    <span class="context-lock">ATTACHED</span>
+
+                  </div>
+
+                  <div class="prompt-composer">
+
+                    <label for="developerPrompt" class="input-label">
+                      Implementation instructions
+                    </label>
+
+                    <textarea
+                      id="developerPrompt"
+                      rows="6"
+                      maxlength="12000"
+                      placeholder="Example: Build the Flask backend, create the MySQL schema, implement secure authentication, and connect the frontend to the API…"
+                    ></textarea>
+
+                    <div class="prompt-composer-footer">
+                      <span id="promptCharCount">0 / 12,000</span>
+                      <span>Be specific about the features and expected behaviour.</span>
+                    </div>
+
+                    <div class="prompt-suggestions" aria-label="Suggested tasks">
+
+                      <button type="button" class="suggestion-chip" data-prompt="Generate the complete application using the Phase 3 blueprint. Implement all essential frontend, backend and database files, with tests and setup instructions.">
+                        ✧ Build complete project
+                      </button>
+
+                      <button type="button" class="suggestion-chip" data-prompt="Implement the backend API and database layer for the project. Include validation, authorization, safe database access, error handling and tests.">
+                        Backend & database
+                      </button>
+
+                      <button type="button" class="suggestion-chip" data-prompt="Implement the responsive frontend for the project and connect it to the planned backend APIs. Include loading, empty, success and error states.">
+                        Frontend implementation
+                      </button>
+
+                      <button type="button" class="suggestion-chip" data-prompt="Review the generated project for bugs and integration gaps. Explain the evidence and propose minimal fixes without changing unrelated behaviour.">
+                        Debug & review
+                      </button>
+
+                    </div>
+
+                    <div class="composer-actions">
+
+                      <span class="composer-note">
+                        <span class="status-dot"></span>
+                        API key remains on the server
+                      </span>
+
+                      <button id="generateCodeBtn" class="primary-button generate-action" type="button" disabled>
+                        <span class="button-spinner" aria-hidden="true"></span>
+                        <span class="button-label">Generate code</span>
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                          <path d="M5 12h14M13 6l6 6-6 6"/>
+                        </svg>
+                      </button>
+
+                    </div>
+
+                    <p id="buildError" class="inline-error" role="alert" hidden></p>
+
+                  </div>
+
+                </section>
+
+                <!-- IMPLEMENTATION CONTEXT -->
+                <section class="panel-card plan-card">
+
+                  <div class="section-heading-compact">
+                    <div>
+                      <span class="section-kicker">IMPLEMENTATION CONTEXT</span>
+                      <h2>What the agent knows</h2>
+                    </div>
+                    <span class="subtle-tag">FROM PHASE 3</span>
+                  </div>
+
+                  <div class="context-grid">
+
+                    <div class="context-item">
+                      <span class="context-index">01</span>
+                      <div>
+                        <strong>Project requirements</strong>
+                        <p id="contextIdea">The original project idea will appear here.</p>
+                      </div>
+                    </div>
+
+                    <div class="context-item">
+                      <span class="context-index">02</span>
+                      <div>
+                        <strong>Technology decisions</strong>
+                        <p id="contextStack">Selected framework and database.</p>
+                      </div>
+                    </div>
+
+                    <div class="context-item">
+                      <span class="context-index">03</span>
+                      <div>
+                        <strong>Architecture</strong>
+                        <p id="contextStructure">Structured folders and files from the Phase 3 blueprint.</p>
+                      </div>
+                    </div>
+
+                  </div>
+                </section>
+
+              </div>
+
+              <!-- AGENT ACTIVITY -->
+              <aside class="build-side-column">
+
+                <section class="panel-card agent-card">
+
+                  <div class="agent-card-head">
+
+                    <div>
+                      <span class="section-kicker">LIVE WORKFLOW</span>
+                      <h2>Agent activity</h2>
+                    </div>
+
+                    <span id="agentStatusBadge" class="state-pill neutral">
+                      <span class="status-dot muted"></span>
+                      IDLE
+                    </span>
+
+                  </div>
+
+                  <p class="agent-card-intro">
+                    The agent's progress and task status will appear here.
+                  </p>
+
+                  <ol id="agentSteps" class="agent-steps">
+
+                    <li class="agent-step is-idle">
+                      <span class="step-marker">01</span>
+                      <div>
+                        <strong>Read project blueprint</strong>
+                        <small>Waiting for a build request</small>
+                      </div>
+                      <span class="step-state">WAITING</span>
+                    </li>
+
+                    <li class="agent-step is-idle">
+                      <span class="step-marker">02</span>
+                      <div>
+                        <strong>Plan implementation</strong>
+                        <small>Identify files and dependencies</small>
+                      </div>
+                      <span class="step-state">WAITING</span>
+                    </li>
+
+                    <li class="agent-step is-idle">
+                      <span class="step-marker">03</span>
+                      <div>
+                        <strong>Generate source code</strong>
+                        <small>Create project files</small>
+                      </div>
+                      <span class="step-state">WAITING</span>
+                    </li>
+
+                    <li class="agent-step is-idle">
+                      <span class="step-marker">04</span>
+                      <div>
+                        <strong>Validate the project</strong>
+                        <small>Check structure and consistency</small>
+                      </div>
+                      <span class="step-state">WAITING</span>
+                    </li>
+
+                  </ol>
+
+                  <div class="agent-progress">
+                    <div class="progress-track">
+                      <span id="agentProgressFill"></span>
+                    </div>
+                    <span id="agentProgressText">0%</span>
+                  </div>
+
+                  <div id="agentJobMessage" class="agent-job-message" role="status">
+                    No active task.
+                  </div>
+
+                  <button id="cancelJobBtn" class="cancel-job-button" type="button" hidden>
+                    Cancel current task
+                  </button>
+
+                </section>
+
+                <!-- SECURITY SHORTCUT -->
+                <section class="panel-card quick-security-card">
+
+                  <div class="quick-security-top">
+                    <span class="quick-shield">
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M12 3 20 6v5.5c0 4.5-3.1 7.6-8 9.5-4.9-1.9-8-5-8-9.5V6z"/>
+                        <path d="m8.5 12 2.2 2.2 4.8-5"/>
+                      </svg>
+                    </span>
+                    <span class="subtle-tag">SECURITY</span>
+                  </div>
+
+                  <h3>Build with security in mind.</h3>
+
+                  <p>
+                    After code generation, run a project-specific assessment.
+                    Findings will include evidence, impact and recommended fixes.
+                  </p>
+
+                  <button id="openSecurityBtn" class="text-action" type="button">
+                    Open Security Center <span>→</span>
+                  </button>
+
+                </section>
+
+              </aside>
+            </div>
+          </section>
+
+          <!-- ==========================================
+               FILES VIEW
+          =========================================== -->
+          <section id="view-files" class="view-panel" data-panel="files" role="tabpanel" aria-labelledby="tab-files" hidden>
+
+            <div class="section-page-heading">
+              <div>
+                <span class="section-kicker">PROJECT SOURCE</span>
+                <h2>Files & architecture</h2>
+                <p>Browse the Phase 3 structure and inspect source files generated by the agent.</p>
+              </div>
+
+              <span id="filesCountBadge" class="subtle-tag">BLUEPRINT FILES</span>
+            </div>
+
+            <div class="files-workspace panel-card">
+
+              <aside class="file-tree-pane" aria-label="Project file explorer">
+
+                <div class="file-tree-toolbar">
+                  <strong>EXPLORER</strong>
+                  <span id="fileTreeCount">0 ITEMS</span>
+                </div>
+
+                <label class="file-search">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <circle cx="10.8" cy="10.8" r="6.3"/>
+                    <path d="m16 16 4.2 4.2"/>
+                  </svg>
+
+                  <input id="fileSearchInput" type="search" placeholder="Filter files…" autocomplete="off">
+                </label>
+
+                <div id="fileTree" class="file-tree">
+                  <p class="muted-empty">Load a Phase 3 project to see its files.</p>
+                </div>
+
+              </aside>
+
+              <section class="file-preview-pane" aria-label="Selected file preview">
+
+                <div class="file-preview-toolbar">
+
+                  <div class="file-breadcrumb">
+                    <span id="fileRootLabel">PROJECT</span>
+                    <span>/</span>
+                    <strong id="selectedFileName">No file selected</strong>
+                  </div>
+
+                  <div class="file-preview-actions">
+                    <span id="fileLanguageBadge" class="language-badge">—</span>
+
+                    <button id="copyFileBtn" class="mini-icon-button" type="button" aria-label="Copy selected file" disabled>
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <rect x="8" y="8" width="11" height="12" rx="2"/>
+                        <path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/>
+                      </svg>
+                    </button>
+                  </div>
+
+                </div>
+
+                <div id="filePreviewEmpty" class="file-preview-empty">
+                  <span class="preview-file-icon">&lt;/&gt;</span>
+                  <strong>Select a file to preview</strong>
+                  <p>Blueprint entries show the intended project structure. Source preview becomes available after code generation.</p>
+                </div>
+
+                <pre id="fileCodePreview" class="code-preview" hidden tabindex="0"><code id="fileCodeContent"></code></pre>
+
+                <div class="file-preview-footer">
+                  <span id="filePreviewStatus">Blueprint structure only</span>
+                  <span>READ-ONLY PREVIEW</span>
+                </div>
+
+              </section>
+
+            </div>
+
+            <p class="view-footnote">
+              <span class="status-dot muted"></span>
+              Files are displayed from the saved project. This interface does not execute project code in the browser.
+            </p>
+
+          </section>
+
+          <!-- ==========================================
+               SECURITY VIEW
+          =========================================== -->
+          <section id="view-security" class="view-panel" data-panel="security" role="tabpanel" aria-labelledby="tab-security" hidden>
+
+            <div class="section-page-heading">
+
+              <div>
+                <span class="section-kicker">APPLICATION SECURITY</span>
+                <h2>Security center</h2>
+                <p>Inspect the generated application for weaknesses and understand what still needs attention.</p>
+              </div>
+
+              <div class="security-header-actions">
+
+                <button id="cancelSecurityJobBtn" class="quiet-button" type="button" hidden>
+                  Cancel scan
+                </button>
+
+                <button id="runSecurityScanBtn" class="primary-button scan-button" type="button" disabled>
+                  <span class="button-spinner" aria-hidden="true"></span>
+                  <span class="button-label">Run security assessment</span>
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M4 12a8 8 0 1 0 2.3-5.7L4 8.5M4 4v4.5h4.5"/>
+                  </svg>
+                </button>
+
+              </div>
+
+            </div>
+
+            <div class="security-notice">
+              <span class="notice-icon">i</span>
+              <p>
+                <strong>Evidence-based assessment.</strong>
+                A code pattern is not automatically a confirmed vulnerability.
+                Checks that cannot run are reported as <b>Not tested</b>, never as passed.
+              </p>
+            </div>
+
+            <!-- SECURITY METRICS -->
+            <div class="security-overview-grid">
+
+              <article class="security-score-card panel-card">
+                <span class="section-kicker">ASSESSMENT STATUS</span>
+
+                <div class="assessment-state">
+                  <span id="assessmentIcon" class="assessment-icon">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M12 3 20 6v5.5c0 4.5-3.1 7.6-8 9.5-4.9-1.9-8-5-8-9.5V6z"/>
+                    </svg>
+                  </span>
+
+                  <div>
+                    <strong id="assessmentStatus">Not assessed</strong>
+                    <small id="assessmentSubtext">No security checks have run for this project.</small>
+                  </div>
+                </div>
+
+                <div class="assessment-meta">
+                  <span id="lastScanText">Last scan: —</span>
+                  <span id="coverageText">Coverage: not measured</span>
+                </div>
+
+              </article>
+
+              <article class="metric-card panel-card">
+                <span class="metric-label">CRITICAL / HIGH</span>
+                <strong id="criticalHighCount" class="metric-value">—</strong>
+                <small>Evidence-backed findings</small>
+                <span class="metric-mark danger-mark"></span>
+              </article>
+
+              <article class="metric-card panel-card">
+                <span class="metric-label">MEDIUM / LOW</span>
+                <strong id="mediumLowCount" class="metric-value">—</strong>
+                <small>Review and prioritise</small>
+                <span class="metric-mark warm-mark"></span>
+              </article>
+
+              <article class="metric-card panel-card">
+                <span class="metric-label">NOT TESTED</span>
+                <strong id="notTestedCount" class="metric-value">—</strong>
+                <small>Coverage gaps remain</small>
+                <span class="metric-mark neutral-mark"></span>
+              </article>
+
+            </div>
+
+            <!-- FINDINGS -->
+            <section class="panel-card findings-card">
+
+              <div class="section-heading-compact findings-heading">
+
+                <div>
+                  <span class="section-kicker">SECURITY FINDINGS</span>
+                  <h2>What needs attention?</h2>
+                  <p id="findingsSummary">Run an assessment to populate project-specific findings.</p>
+                </div>
+
+                <div class="finding-filters">
+
+                  <label class="sr-only" for="severityFilter">Filter by severity</label>
+
+                  <select id="severityFilter">
+                    <option value="all">All severities</option>
+                    <option value="critical">Critical</option>
+                    <option value="high">High</option>
+                    <option value="medium">Medium</option>
+                    <option value="low">Low</option>
+                    <option value="informational">Informational</option>
+                  </select>
+
+                  <label class="sr-only" for="findingStatusFilter">Filter by status</label>
+
+                  <select id="findingStatusFilter">
+                    <option value="all">All statuses</option>
+                    <option value="open">Open</option>
+                    <option value="potential">Potential</option>
+                    <option value="verified fixed">Verified fixed</option>
+                  </select>
+
+                </div>
+
+              </div>
+
+              <div id="findingsList" class="findings-list">
+                <div class="findings-empty">
+                  <span class="empty-shield">◇</span>
+                  <strong>No assessment results yet</strong>
+                  <p>Start a security assessment to inspect source code, dependencies and configuration.</p>
+                </div>
+              </div>
+
+            </section>
+
+            <!-- SECURITY COVERAGE -->
+            <section class="panel-card coverage-card">
+
+              <div class="section-heading-compact">
+                <div>
+                  <span class="section-kicker">ASSESSMENT COVERAGE</span>
+                  <h2>What was checked?</h2>
+                </div>
+                <span class="subtle-tag">TRANSPARENT RESULTS</span>
+              </div>
+
+              <div id="coverageList" class="coverage-list">
+                <div class="coverage-placeholder">
+                  Coverage details will appear after a scan.
+                  A category is only marked as passed when its check actually runs.
+                </div>
+              </div>
+
+            </section>
+
+          </section>
+
+          <!-- ==========================================
+               REPORTS VIEW
+          =========================================== -->
+          <section id="view-reports" class="view-panel" data-panel="reports" role="tabpanel" aria-labelledby="tab-reports" hidden>
+
+            <div class="section-page-heading">
+
+              <div>
+                <span class="section-kicker">PROJECT HISTORY</span>
+                <h2>Reports & activity</h2>
+                <p>Review generation jobs, security assessments and remediation history.</p>
+              </div>
+
+              <button id="downloadReportBtn" class="outline-button" type="button" disabled>
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M12 3v12M7 10l5 5 5-5M4 20h16"/>
+                </svg>
+                Export security JSON
+              </button>
+
+            </div>
+
+            <div class="reports-grid">
+
+              <section class="panel-card report-summary-card">
+                <span class="section-kicker">LATEST SECURITY REPORT</span>
+
+                <div class="report-summary-icon">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M6 3.5h8l4 4v13H6z"/>
+                    <path d="M14 3.5v4h4M9 12h6M9 15.5h6"/>
+                  </svg>
+                </div>
+
+                <h3 id="reportSummaryTitle">No report generated</h3>
+                <p id="reportSummaryText">Your latest security assessment will appear here when completed.</p>
+
+                <div class="report-summary-meta">
+                  <span id="reportDateText">DATE —</span>
+                  <span id="reportFindingsText">0 FINDINGS</span>
+                </div>
+              </section>
+
+              <section class="panel-card activity-card">
+
+                <div class="section-heading-compact">
+                  <div>
+                    <span class="section-kicker">WORKSPACE TIMELINE</span>
+                    <h2>Recent activity</h2>
+                  </div>
+                  <span class="subtle-tag">LATEST FIRST</span>
+                </div>
+
+                <ol id="activityTimeline" class="activity-timeline">
+                  <li class="activity-empty">
+                    No activity yet. Build the project or run a security assessment to start the timeline.
+                  </li>
+                </ol>
+
+              </section>
+
+            </div>
+
+            <section class="panel-card report-limitations">
+              <span class="section-kicker">REPORTING POLICY</span>
+              <h3>What this report can and cannot tell you</h3>
+              <p>
+                Automated checks provide evidence within their tested scope.
+                A source-only assessment cannot verify every deployment setting,
+                runtime path or business rule.
+                This workspace never represents a project as 100% secure.
+              </p>
+              <a href="https://owasp.org/www-project-application-security-verification-standard/" target="_blank" rel="noopener noreferrer">
+                Review OWASP ASVS <span aria-hidden="true">↗</span>
+              </a>
+            </section>
+
+          </section>
+
+          <footer class="workspace-footer">
+            <span>WEB / LAB <i>·</i> PHASE 04 — AI DEVELOPMENT & SECURITY</span>
+            <span id="workspaceFooterStatus">Waiting for project</span>
+          </footer>
+
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- FINDING DETAIL MODAL -->
+  <div id="findingModal" class="modal-backdrop" hidden>
+
+    <section class="detail-modal" role="dialog" aria-modal="true" aria-labelledby="findingModalTitle" tabindex="-1">
+
+      <button id="closeFindingModal" class="modal-close" type="button" aria-label="Close finding details">×</button>
+
+      <span class="section-kicker">VULNERABILITY DETAIL</span>
+
+      <div class="modal-title-row">
+        <h2 id="findingModalTitle">Finding details</h2>
+        <span id="modalSeverity" class="severity-badge">—</span>
+      </div>
+
+      <p id="modalFindingLocation" class="modal-location"></p>
+
+      <div class="detail-block">
+        <span>WHAT WAS FOUND</span>
+        <p id="modalFindingEvidence"></p>
+      </div>
+
+      <div class="detail-block">
+        <span>ATTACK SCENARIO & IMPACT</span>
+        <p id="modalFindingImpact"></p>
+      </div>
+
+      <div class="detail-block fix-detail">
+        <span>RECOMMENDED FIX</span>
+        <p id="modalFindingFix"></p>
+      </div>
+
+      <div class="patch-preview" id="patchPreview" hidden>
+        <span>PATCH PROPOSAL</span>
+        <pre id="patchPreviewText"></pre>
+      </div>
+
+      <div class="modal-actions">
+        <button id="requestFixBtn" class="primary-button" type="button">
+          Request fix proposal
+        </button>
+        <button id="closeFindingModalSecondary" class="quiet-button" type="button">
+          Close
+        </button>
+      </div>
+
+      <p id="fixActionMessage" class="inline-note" role="status"></p>
+
+    </section>
+  </div>
+
+  <!-- GLOBAL FEEDBACK -->
+  <div id="toastRegion" class="toast-region" aria-live="polite" aria-atomic="true"></div>
+  <div id="globalLiveRegion" class="sr-only" role="status" aria-live="polite"></div>
+
+</body>
+</html>

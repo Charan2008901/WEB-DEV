@@ -19,3 +19,17 @@ node_modules/
 # Private keys and certificates
 *.pem
 *.key
+
+
+
+# Phase 4 generated workspaces
+backend/workspaces/
+backend/temp/
+backend/reports/
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
