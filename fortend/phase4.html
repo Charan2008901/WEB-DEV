@@ -20,7 +20,6 @@
 
     <!-- TOP NAVIGATION -->
     <header class="topbar">
-
       <a class="brand-lockup" href="./index.html" aria-label="WEB / LAB home">
         <span class="brand-mark" aria-hidden="true">W<span>/</span>L</span>
         <span class="brand-copy">
@@ -40,15 +39,14 @@
       </div>
 
       <div class="topbar-actions">
-
         <span id="connectionStatus" class="connection-state" role="status">
           <span class="status-dot"></span>
           Connecting
         </span>
 
-        <a class="topbar-link" href="./phase-3.html" title="Return to Phase 3">
-          Phase 3
-        </a>
+        <button id="newProjectBtn" class="topbar-link-button" type="button" title="Start a new independent Phase 4 project">
+          New project
+        </button>
 
         <button id="refreshProjectBtn" class="icon-button" type="button" aria-label="Reload project and refresh job status" title="Reload project">
           <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -72,7 +70,7 @@
           <div class="sidebar-project-copy">
             <span class="sidebar-eyebrow">CURRENT PROJECT</span>
             <strong id="sidebarProjectName">No project loaded</strong>
-            <small id="sidebarProjectStack">Open a Phase 3 blueprint</small>
+            <small id="sidebarProjectStack">Create a project from a master prompt</small>
           </div>
 
           <span id="projectLoadBadge" class="tiny-badge">WAITING</span>
@@ -81,7 +79,6 @@
         <p class="nav-label">WORKSPACE</p>
 
         <nav class="primary-nav" aria-label="Phase 4 sections">
-
           <button class="nav-item is-active" type="button" data-view="build" aria-label="Open AI Developer view" aria-current="page">
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="m8 8-4 4 4 4M16 8l4 4-4 4M14 5l-4 14"/>
@@ -116,7 +113,6 @@
             <span>Reports & activity</span>
             <kbd>04</kbd>
           </button>
-
         </nav>
 
         <div class="sidebar-divider"></div>
@@ -126,8 +122,8 @@
         <div class="sidebar-status-list">
           <div>
             <span class="status-indicator muted"></span>
-            <span>Blueprint</span>
-            <strong id="sidebarBlueprintStatus">Not loaded</strong>
+            <span>Project spec</span>
+            <strong id="sidebarProjectSpecStatus">Not loaded</strong>
           </div>
 
           <div>
@@ -157,7 +153,6 @@
         <div class="sidebar-footer">
           WEB / LAB <span>·</span> PHASE 04
         </div>
-
       </aside>
 
       <!-- MAIN WORKSPACE -->
@@ -169,43 +164,62 @@
           <div class="empty-orbit empty-orbit-one" aria-hidden="true"></div>
           <div class="empty-orbit empty-orbit-two" aria-hidden="true"></div>
 
-          <span class="section-kicker">PHASE 04 / PROJECT HANDOFF</span>
+          <span class="section-kicker">PHASE 04 / INDEPENDENT PROJECT INTAKE</span>
 
           <div class="empty-icon">
             <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M4 7.5h6l2 2h8v9H4z"/>
-              <path d="M8 13h8M8 16h5"/>
+              <path d="M4 5.5h16v13H4z"/>
+              <path d="M8 9h8M8 12h8M8 15h5"/>
             </svg>
           </div>
 
           <h1 id="emptyTitle">
-            Your workspace is<br>
-            <em>ready for a project.</em>
+            Start with your<br>
+            <em>master prompt.</em>
           </h1>
 
-          <p>
-            Phase 4 continues from a blueprint created in Phase 3.
-            Return to Phase 3, generate your project blueprint,
-            then use its <strong>Continue to Phase 4</strong> action.
+          <p class="intake-description">
+            Phase 4 works independently. Paste your complete project specification below.
+            The AI will analyse your requirements, identify the technology stack and propose
+            a reviewable project manifest before generating code.
           </p>
 
-          <div class="empty-actions">
-            <a class="primary-button" href="./phase-3.html">
-              Go to Phase 3 <span aria-hidden="true">→</span>
-            </a>
+          <div class="master-prompt-intake">
+            <label for="masterPromptInput" class="input-label">Complete project master prompt</label>
+            <textarea id="masterPromptInput" rows="10" maxlength="50000"
+              placeholder="Paste the complete project master prompt here. Include the purpose, users, features, workflows, preferred technologies, database requirements, integrations and expected behaviour…"></textarea>
 
-            <button id="retryLoadBtn" class="quiet-button" type="button">
-              Try loading again
-            </button>
+            <div class="prompt-composer-footer">
+              <span id="masterPromptCount">0 / 50,000</span>
+              <span>Use the full specification, not a short summary.</span>
+            </div>
+
+            <label class="privacy-consent" for="masterPromptConsent">
+              <input id="masterPromptConsent" type="checkbox">
+              <span>I understand that the prompt and relevant project source context will be sent to Google Gemini for analysis and code generation. I will not include passwords, API keys or private credentials.</span>
+            </label>
+
+            <div class="intake-actions">
+              <button id="analyzeProjectBtn" class="primary-button" type="button" disabled>
+                <span class="button-spinner" aria-hidden="true"></span>
+                <span class="button-label">Analyse project</span>
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M5 12h14M13 6l6 6-6 6"/>
+                </svg>
+              </button>
+
+              <button id="retryLoadBtn" class="quiet-button" type="button" hidden>
+                Reload saved project
+              </button>
+            </div>
           </div>
 
           <div class="empty-meta">
             <span class="status-dot"></span>
-            Project data will be loaded securely from the backend using its project ID.
+            Independent Phase 4 workspace · Gemini analysis · MySQL project storage
           </div>
 
           <p id="emptyError" class="inline-error" role="alert" hidden></p>
-
         </section>
 
         <!-- PROJECT WORKSPACE -->
@@ -213,7 +227,6 @@
 
           <!-- PROJECT HEADING -->
           <section class="workspace-heading">
-
             <div>
               <div class="section-kicker">
                 YOUR BUILD ENVIRONMENT
@@ -222,7 +235,7 @@
               </div>
 
               <h1>
-                From blueprint to <em>working software.</em>
+                From requirements to <em>working software.</em>
               </h1>
 
               <p>
@@ -232,10 +245,9 @@
             </div>
 
             <div class="heading-actions">
-
               <span id="projectOrigin" class="origin-pill">
                 <span class="origin-dot"></span>
-                PHASE 3 BLUEPRINT
+                INDEPENDENT MASTER PROMPT
               </span>
 
               <button id="exportProjectBtn" class="outline-button" type="button" disabled>
@@ -244,20 +256,18 @@
                 </svg>
                 Export project
               </button>
-
             </div>
           </section>
 
           <!-- PROJECT SUMMARY -->
           <section class="project-summary glass-panel" aria-label="Current project summary">
-
             <div class="summary-main">
               <div class="summary-project-icon" id="summaryProjectIcon">PR</div>
 
               <div class="summary-project-copy">
                 <span class="summary-label">CURRENT PROJECT</span>
                 <h2 id="projectName">Loading project…</h2>
-                <p id="projectDescription">Loading the saved Phase 3 blueprint.</p>
+                <p id="projectDescription">Loading your saved Phase 4 project.</p>
               </div>
             </div>
 
@@ -280,14 +290,12 @@
 
             <div class="summary-state">
               <span id="projectStateDot" class="status-dot muted"></span>
-              <span id="projectStateText">Blueprint imported</span>
+              <span id="projectStateText">Project analysed</span>
             </div>
-
           </section>
 
           <!-- WORKSPACE TABS -->
           <div class="workspace-tabs" role="tablist" aria-label="Workspace views">
-
             <button class="workspace-tab is-active" id="tab-build" type="button" role="tab" aria-selected="true" aria-controls="view-build" tabindex="0" data-view="build">
               <span class="tab-index">01</span> Build
             </button>
@@ -303,22 +311,15 @@
             <button class="workspace-tab" id="tab-reports" type="button" role="tab" aria-selected="false" aria-controls="view-reports" tabindex="-1" data-view="reports">
               <span class="tab-index">04</span> Reports
             </button>
-
           </div>
 
-          <!-- ==========================================
-               BUILD VIEW
-          =========================================== -->
+          <!-- BUILD VIEW -->
           <section id="view-build" class="view-panel is-visible" data-panel="build" role="tabpanel" aria-labelledby="tab-build">
-
             <div class="build-layout">
 
               <div class="build-main-column">
-
                 <section class="panel-card developer-card">
-
                   <div class="panel-heading-row">
-
                     <div class="panel-title-group">
                       <span class="panel-icon orange-icon">
                         <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -336,17 +337,15 @@
                       <span class="provider-spark">✦</span>
                       GEMINI API
                     </span>
-
                   </div>
 
                   <p class="panel-intro">
-                    Your Phase 3 blueprint is the project context.
+                    Your analysed master prompt is the project context.
                     Describe the next implementation task or ask
-                    the agent to build the full application.
+                    the agent to build the complete application from your analysed master prompt.
                   </p>
 
                   <div class="context-strip">
-
                     <div class="context-strip-icon">
                       <svg viewBox="0 0 24 24" aria-hidden="true">
                         <path d="M4 7.5h6l2 2h8v9H4z"/>
@@ -354,18 +353,21 @@
                     </div>
 
                     <div>
-                      <strong>Using Phase 3 blueprint</strong>
-                      <small id="blueprintContext">
-                        Project idea, stack, database and folder structure will be supplied.
+                      <strong>Using analysed project specification</strong>
+                      <small id="projectAnalysisContext">
+                        The analysed requirements and project manifest are attached.
                       </small>
                     </div>
 
                     <span class="context-lock">ATTACHED</span>
-
                   </div>
 
-                  <div class="prompt-composer">
+                  <label class="manifest-review-gate" for="manifestReviewed">
+                    <input id="manifestReviewed" type="checkbox">
+                    <span><strong>Review the project manifest first.</strong> Open the Files view, inspect the proposed structure, then confirm that it is the correct plan for code generation.</span>
+                  </label>
 
+                  <div class="prompt-composer">
                     <label for="developerPrompt" class="input-label">
                       Implementation instructions
                     </label>
@@ -383,8 +385,7 @@
                     </div>
 
                     <div class="prompt-suggestions" aria-label="Suggested tasks">
-
-                      <button type="button" class="suggestion-chip" data-prompt="Generate the complete application using the Phase 3 blueprint. Implement all essential frontend, backend and database files, with tests and setup instructions.">
+                      <button type="button" class="suggestion-chip" data-prompt="Generate the complete application from the analysed project specification. Implement all essential frontend, backend and database files, with tests and setup instructions.">
                         ✧ Build complete project
                       </button>
 
@@ -399,11 +400,9 @@
                       <button type="button" class="suggestion-chip" data-prompt="Review the generated project for bugs and integration gaps. Explain the evidence and propose minimal fixes without changing unrelated behaviour.">
                         Debug & review
                       </button>
-
                     </div>
 
                     <div class="composer-actions">
-
                       <span class="composer-note">
                         <span class="status-dot"></span>
                         API key remains on the server
@@ -416,33 +415,28 @@
                           <path d="M5 12h14M13 6l6 6-6 6"/>
                         </svg>
                       </button>
-
                     </div>
 
                     <p id="buildError" class="inline-error" role="alert" hidden></p>
-
                   </div>
-
                 </section>
 
                 <!-- IMPLEMENTATION CONTEXT -->
                 <section class="panel-card plan-card">
-
                   <div class="section-heading-compact">
                     <div>
                       <span class="section-kicker">IMPLEMENTATION CONTEXT</span>
                       <h2>What the agent knows</h2>
                     </div>
-                    <span class="subtle-tag">FROM PHASE 3</span>
+                    <span class="subtle-tag">ANALYSED MASTER PROMPT</span>
                   </div>
 
                   <div class="context-grid">
-
                     <div class="context-item">
                       <span class="context-index">01</span>
                       <div>
                         <strong>Project requirements</strong>
-                        <p id="contextIdea">The original project idea will appear here.</p>
+                        <p id="contextIdea">The original project requirements will appear here.</p>
                       </div>
                     </div>
 
@@ -450,7 +444,7 @@
                       <span class="context-index">02</span>
                       <div>
                         <strong>Technology decisions</strong>
-                        <p id="contextStack">Selected framework and database.</p>
+                        <p id="contextStack">Detected framework and database.</p>
                       </div>
                     </div>
 
@@ -458,22 +452,17 @@
                       <span class="context-index">03</span>
                       <div>
                         <strong>Architecture</strong>
-                        <p id="contextStructure">Structured folders and files from the Phase 3 blueprint.</p>
+                        <p id="contextStructure">Structured folders and files proposed by Phase 4.</p>
                       </div>
                     </div>
-
                   </div>
                 </section>
-
               </div>
 
               <!-- AGENT ACTIVITY -->
               <aside class="build-side-column">
-
                 <section class="panel-card agent-card">
-
                   <div class="agent-card-head">
-
                     <div>
                       <span class="section-kicker">LIVE WORKFLOW</span>
                       <h2>Agent activity</h2>
@@ -483,7 +472,6 @@
                       <span class="status-dot muted"></span>
                       IDLE
                     </span>
-
                   </div>
 
                   <p class="agent-card-intro">
@@ -491,11 +479,10 @@
                   </p>
 
                   <ol id="agentSteps" class="agent-steps">
-
                     <li class="agent-step is-idle">
                       <span class="step-marker">01</span>
                       <div>
-                        <strong>Read project blueprint</strong>
+                        <strong>Read master prompt and manifest</strong>
                         <small>Waiting for a build request</small>
                       </div>
                       <span class="step-state">WAITING</span>
@@ -527,7 +514,6 @@
                       </div>
                       <span class="step-state">WAITING</span>
                     </li>
-
                   </ol>
 
                   <div class="agent-progress">
@@ -544,12 +530,10 @@
                   <button id="cancelJobBtn" class="cancel-job-button" type="button" hidden>
                     Cancel current task
                   </button>
-
                 </section>
 
                 <!-- SECURITY SHORTCUT -->
                 <section class="panel-card quick-security-card">
-
                   <div class="quick-security-top">
                     <span class="quick-shield">
                       <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -570,32 +554,24 @@
                   <button id="openSecurityBtn" class="text-action" type="button">
                     Open Security Center <span>→</span>
                   </button>
-
                 </section>
-
               </aside>
             </div>
           </section>
 
-          <!-- ==========================================
-               FILES VIEW
-          =========================================== -->
+          <!-- FILES VIEW -->
           <section id="view-files" class="view-panel" data-panel="files" role="tabpanel" aria-labelledby="tab-files" hidden>
-
             <div class="section-page-heading">
               <div>
                 <span class="section-kicker">PROJECT SOURCE</span>
                 <h2>Files & architecture</h2>
-                <p>Browse the Phase 3 structure and inspect source files generated by the agent.</p>
+                <p>Browse the manifest created from your master prompt and inspect source files generated by the agent.</p>
               </div>
-
-              <span id="filesCountBadge" class="subtle-tag">BLUEPRINT FILES</span>
+              <span id="filesCountBadge" class="subtle-tag">PROJECT MANIFEST</span>
             </div>
 
             <div class="files-workspace panel-card">
-
               <aside class="file-tree-pane" aria-label="Project file explorer">
-
                 <div class="file-tree-toolbar">
                   <strong>EXPLORER</strong>
                   <span id="fileTreeCount">0 ITEMS</span>
@@ -606,20 +582,16 @@
                     <circle cx="10.8" cy="10.8" r="6.3"/>
                     <path d="m16 16 4.2 4.2"/>
                   </svg>
-
                   <input id="fileSearchInput" type="search" placeholder="Filter files…" autocomplete="off">
                 </label>
 
                 <div id="fileTree" class="file-tree">
-                  <p class="muted-empty">Load a Phase 3 project to see its files.</p>
+                  <p class="muted-empty">Analyse a master prompt to create your project manifest.</p>
                 </div>
-
               </aside>
 
               <section class="file-preview-pane" aria-label="Selected file preview">
-
                 <div class="file-preview-toolbar">
-
                   <div class="file-breadcrumb">
                     <span id="fileRootLabel">PROJECT</span>
                     <span>/</span>
@@ -636,40 +608,32 @@
                       </svg>
                     </button>
                   </div>
-
                 </div>
 
                 <div id="filePreviewEmpty" class="file-preview-empty">
                   <span class="preview-file-icon">&lt;/&gt;</span>
                   <strong>Select a file to preview</strong>
-                  <p>Blueprint entries show the intended project structure. Source preview becomes available after code generation.</p>
+                  <p>Manifest entries show the intended project structure. Source preview becomes available after code generation.</p>
                 </div>
 
                 <pre id="fileCodePreview" class="code-preview" hidden tabindex="0"><code id="fileCodeContent"></code></pre>
 
                 <div class="file-preview-footer">
-                  <span id="filePreviewStatus">Blueprint structure only</span>
+                  <span id="filePreviewStatus">Manifest structure only</span>
                   <span>READ-ONLY PREVIEW</span>
                 </div>
-
               </section>
-
             </div>
 
             <p class="view-footnote">
               <span class="status-dot muted"></span>
               Files are displayed from the saved project. This interface does not execute project code in the browser.
             </p>
-
           </section>
 
-          <!-- ==========================================
-               SECURITY VIEW
-          =========================================== -->
+          <!-- SECURITY VIEW -->
           <section id="view-security" class="view-panel" data-panel="security" role="tabpanel" aria-labelledby="tab-security" hidden>
-
             <div class="section-page-heading">
-
               <div>
                 <span class="section-kicker">APPLICATION SECURITY</span>
                 <h2>Security center</h2>
@@ -677,7 +641,6 @@
               </div>
 
               <div class="security-header-actions">
-
                 <button id="cancelSecurityJobBtn" class="quiet-button" type="button" hidden>
                   Cancel scan
                 </button>
@@ -689,9 +652,7 @@
                     <path d="M4 12a8 8 0 1 0 2.3-5.7L4 8.5M4 4v4.5h4.5"/>
                   </svg>
                 </button>
-
               </div>
-
             </div>
 
             <div class="security-notice">
@@ -705,7 +666,6 @@
 
             <!-- SECURITY METRICS -->
             <div class="security-overview-grid">
-
               <article class="security-score-card panel-card">
                 <span class="section-kicker">ASSESSMENT STATUS</span>
 
@@ -726,7 +686,6 @@
                   <span id="lastScanText">Last scan: —</span>
                   <span id="coverageText">Coverage: not measured</span>
                 </div>
-
               </article>
 
               <article class="metric-card panel-card">
@@ -749,14 +708,11 @@
                 <small>Coverage gaps remain</small>
                 <span class="metric-mark neutral-mark"></span>
               </article>
-
             </div>
 
             <!-- FINDINGS -->
             <section class="panel-card findings-card">
-
               <div class="section-heading-compact findings-heading">
-
                 <div>
                   <span class="section-kicker">SECURITY FINDINGS</span>
                   <h2>What needs attention?</h2>
@@ -764,7 +720,6 @@
                 </div>
 
                 <div class="finding-filters">
-
                   <label class="sr-only" for="severityFilter">Filter by severity</label>
 
                   <select id="severityFilter">
@@ -784,9 +739,7 @@
                     <option value="potential">Potential</option>
                     <option value="verified fixed">Verified fixed</option>
                   </select>
-
                 </div>
-
               </div>
 
               <div id="findingsList" class="findings-list">
@@ -796,12 +749,10 @@
                   <p>Start a security assessment to inspect source code, dependencies and configuration.</p>
                 </div>
               </div>
-
             </section>
 
             <!-- SECURITY COVERAGE -->
             <section class="panel-card coverage-card">
-
               <div class="section-heading-compact">
                 <div>
                   <span class="section-kicker">ASSESSMENT COVERAGE</span>
@@ -816,18 +767,12 @@
                   A category is only marked as passed when its check actually runs.
                 </div>
               </div>
-
             </section>
-
           </section>
 
-          <!-- ==========================================
-               REPORTS VIEW
-          =========================================== -->
+          <!-- REPORTS VIEW -->
           <section id="view-reports" class="view-panel" data-panel="reports" role="tabpanel" aria-labelledby="tab-reports" hidden>
-
             <div class="section-page-heading">
-
               <div>
                 <span class="section-kicker">PROJECT HISTORY</span>
                 <h2>Reports & activity</h2>
@@ -840,11 +785,9 @@
                 </svg>
                 Export security JSON
               </button>
-
             </div>
 
             <div class="reports-grid">
-
               <section class="panel-card report-summary-card">
                 <span class="section-kicker">LATEST SECURITY REPORT</span>
 
@@ -865,7 +808,6 @@
               </section>
 
               <section class="panel-card activity-card">
-
                 <div class="section-heading-compact">
                   <div>
                     <span class="section-kicker">WORKSPACE TIMELINE</span>
@@ -879,9 +821,7 @@
                     No activity yet. Build the project or run a security assessment to start the timeline.
                   </li>
                 </ol>
-
               </section>
-
             </div>
 
             <section class="panel-card report-limitations">
@@ -897,7 +837,6 @@
                 Review OWASP ASVS <span aria-hidden="true">↗</span>
               </a>
             </section>
-
           </section>
 
           <footer class="workspace-footer">
@@ -912,9 +851,7 @@
 
   <!-- FINDING DETAIL MODAL -->
   <div id="findingModal" class="modal-backdrop" hidden>
-
     <section class="detail-modal" role="dialog" aria-modal="true" aria-labelledby="findingModalTitle" aria-describedby="modalFindingEvidence" tabindex="-1">
-
       <button id="closeFindingModal" class="modal-close" type="button" aria-label="Close finding details">×</button>
 
       <span class="section-kicker">VULNERABILITY DETAIL</span>
@@ -956,7 +893,6 @@
       </div>
 
       <p id="fixActionMessage" class="inline-note" role="status"></p>
-
     </section>
   </div>
 

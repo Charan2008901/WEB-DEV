@@ -1,43 +1,71 @@
-/* ========================================================================
+/* ==========================================================================
    WEB / LAB — PHASE 04
-   AI Development Workspace
-   Phase 3 Blueprint Handoff
-   Gemini Job Orchestration
-   File Explorer
-   Security Assessment
-   Remediation Proposals
-   Reporting and Export
+   Independent AI Development & Application Security Workspace
 
-   SECURITY:
-   - Gemini API key stays on the server.
-   - Google ID token is sent through Bearer authentication.
-   - Project ownership and permissions must be verified by Flask.
-   - Project source is displayed using textContent.
-   - No generated project code is executed in the browser.
-   ======================================================================== */
+   Workflow:
+   1. User pastes a master prompt.
+   2. Gemini analyses the requirements through the Phase 4 backend.
+   3. Phase 4 creates a project manifest.
+   4. User reviews and confirms the manifest.
+   5. Gemini generates project files.
+   6. Phase 4 validates generated files.
+   7. Security assessment evaluates the saved source.
+   8. User reviews findings and requests remediation proposals.
+
+   This application has no Phase 3 dependency and no CENTRAL integration.
+
+   Backend requirement:
+   POST /api/phase4/projects/analyze
+   must accept:
+   {
+       "master_prompt": "...",
+       "provider_consent": true
+   }
+
+   The endpoint must return a Phase 4 project_id and analysed project
+   specification/manifest. The remaining endpoints are listed below.
+
+   ========================================================================== */
 
 (() => {
   "use strict";
 
-  // ============================================================
-  // CONFIGURATION
-  // ============================================================
+  // =========================================================================
+  // 1. CONFIGURATION
+  // =========================================================================
+
+  /*
+   * Configure your existing backend URL before loading this script:
+   *
+   * window.WEBLAB_CONFIG = {
+   *     API_BASE_URL: "https://YOUR-BACKEND.onrender.com"
+   * };
+   *
+   * Alternatively:
+   * window.PHASE4_API_BASE_URL = "https://YOUR-BACKEND.onrender.com";
+   *
+   * If neither is configured, the current page origin is used.
+   */
 
   const API_BASE_URL = String(
     window.WEBLAB_CONFIG?.API_BASE_URL ||
-    "https://web-dev-backend-g976.onrender.com"
-  ).replace(/\/$/, "");
+    window.PHASE4_API_BASE_URL ||
+    window.location.origin
+  ).replace(/\/+$/, "");
 
   const API = {
-    project: (id) => `/api/phase4/projects/${encodeURIComponent(id)}`,
+    analyze: "/api/phase4/projects/analyze",
+
+    project: (id) =>
+      `/api/phase4/projects/${encodeURIComponent(id)}`,
 
     generate: (id) =>
       `/api/phase4/projects/${encodeURIComponent(id)}/generate`,
 
-    scan: (id) =>
+    securityScan: (id) =>
       `/api/phase4/projects/${encodeURIComponent(id)}/security-scan`,
 
-    report: (id) =>
+    securityReport: (id) =>
       `/api/phase4/projects/${encodeURIComponent(id)}/security-report`,
 
     job: (id) =>
@@ -49,90 +77,82 @@
     fix: (projectId, findingId) =>
       `/api/phase4/projects/${encodeURIComponent(projectId)}/findings/${encodeURIComponent(findingId)}/fix`,
 
-    exportProject: (id) =>
+    export: (id) =>
       `/api/phase4/projects/${encodeURIComponent(id)}/export`
   };
 
-  const JOB_POLL_INTERVAL_MS = 2500;
-  const JOB_MAX_POLLS = 144;
+  const CONFIG = {
+    maxMasterPromptLength: 50000,
+    minMasterPromptLength: 40,
+    maxTaskPromptLength: 12000,
 
-  const TOKEN_KEY = "google_id_token";
-  const ACTIVE_JOB_KEY = "weblab.phase4.activeJob.v1";
-  const ACTIVITY_KEY_PREFIX = "weblab.phase4.activity.v1:";
+    pollInterval: 2500,
+    maxPollAttempts: 144,
 
-  // ============================================================
-  // URL PARAMETERS
-  // ============================================================
+    maxPollRetryDelay: 30000,
 
-  const params = new URLSearchParams(window.location.search);
+    activityLimit: 30
+  };
 
-  const requestedProjectId =
-    params.get("project_id") ||
-    params.get("projectId") ||
-    params.get("id");
+  const STORAGE_KEYS = {
+    currentProject: "weblab.phase4.currentProject.v1",
+    activeJob: "weblab.phase4.activeJob.v1",
+    activityPrefix: "weblab.phase4.activity.v1:"
+  };
 
-  const isDemo = params.get("demo") === "1";
-
-  // ============================================================
-  // APPLICATION STATE
-  // ============================================================
+  // =========================================================================
+  // 2. APPLICATION STATE
+  // =========================================================================
 
   const state = {
-    projectId: requestedProjectId,
+    projectId: "",
 
     project: null,
 
-    blueprint: null,
+    manifest: [],
 
     tree: null,
 
     files: new Map(),
 
-    selectedFilePath: "",
+    report: null,
 
     findings: [],
-
-    report: null,
 
     coverage: [],
 
     activity: [],
 
-    activeView: "build",
-
     activeJob: null,
 
-    pollCount: 0,
+    activeView: "build",
 
-    pollRetryCount: 0,
-
-    pollTimer: null,
-
-    jobController: null,
-
-    jobPollingPaused: false,
+    selectedFile: "",
 
     currentFinding: null,
 
     previousModalFocus: null,
 
-    demo: isDemo,
+    pollTimer: null,
 
-    projectLoaded: false
+    pollController: null,
+
+    pollCount: 0,
+
+    retryCount: 0,
+
+    pollingPaused: false,
+
+    projectLoaded: false,
+
+    busy: false
   };
 
+  // =========================================================================
+  // 3. DOM REFERENCES
+  // =========================================================================
+
   const $ = (id) => document.getElementById(id);
-
-  const views = [
-    "build",
-    "files",
-    "security",
-    "reports"
-  ];
-
-  // ============================================================
-  // HTML ELEMENT REFERENCES
-  // ============================================================
 
   const els = {
     empty: $("emptyProjectState"),
@@ -143,15 +163,19 @@
 
     refresh: $("refreshProjectBtn"),
     retryLoad: $("retryLoadBtn"),
+    newProject: $("newProjectBtn"),
+
+    masterPrompt: $("masterPromptInput"),
+    masterPromptCount: $("masterPromptCount"),
+    masterPromptConsent: $("masterPromptConsent"),
+    analyzeButton: $("analyzeProjectBtn"),
 
     sidebarProjectName: $("sidebarProjectName"),
     sidebarProjectStack: $("sidebarProjectStack"),
-
     projectMonogram: $("projectMonogram"),
     projectLoadBadge: $("projectLoadBadge"),
 
-    // FIX: All three sidebar status elements are registered.
-    sidebarBlueprintStatus: $("sidebarBlueprintStatus"),
+    sidebarProjectSpecStatus: $("sidebarProjectSpecStatus"),
     sidebarBuildStatus: $("sidebarBuildStatus"),
     sidebarScanStatus: $("sidebarScanStatus"),
 
@@ -160,7 +184,6 @@
 
     projectFramework: $("projectFramework"),
     projectDatabase: $("projectDatabase"),
-
     projectFileCount: $("projectFileCount"),
 
     projectOrigin: $("projectOrigin"),
@@ -169,14 +192,15 @@
     projectStateText: $("projectStateText"),
 
     summaryProjectIcon: $("summaryProjectIcon"),
-
-    blueprintContext: $("blueprintContext"),
+    projectAnalysisContext: $("projectAnalysisContext"),
 
     contextIdea: $("contextIdea"),
     contextStack: $("contextStack"),
     contextStructure: $("contextStructure"),
 
-    prompt: $("developerPrompt"),
+    manifestReviewed: $("manifestReviewed"),
+
+    developerPrompt: $("developerPrompt"),
     promptCount: $("promptCharCount"),
 
     buildButton: $("generateCodeBtn"),
@@ -184,10 +208,8 @@
 
     agentBadge: $("agentStatusBadge"),
     agentSteps: $("agentSteps"),
-
     agentProgressFill: $("agentProgressFill"),
     agentProgressText: $("agentProgressText"),
-
     agentMessage: $("agentJobMessage"),
 
     cancelJob: $("cancelJobBtn"),
@@ -197,19 +219,16 @@
 
     fileTree: $("fileTree"),
     fileSearch: $("fileSearchInput"),
-
     fileTreeCount: $("fileTreeCount"),
     filesCountBadge: $("filesCountBadge"),
 
     fileRootLabel: $("fileRootLabel"),
-
     selectedFileName: $("selectedFileName"),
-    fileLanguageBadge: $("fileLanguageBadge"),
+    fileLanguage: $("fileLanguageBadge"),
 
     filePreviewEmpty: $("filePreviewEmpty"),
     fileCodePreview: $("fileCodePreview"),
     fileCodeContent: $("fileCodeContent"),
-
     filePreviewStatus: $("filePreviewStatus"),
 
     copyFile: $("copyFileBtn"),
@@ -237,22 +256,18 @@
 
     reportSummaryTitle: $("reportSummaryTitle"),
     reportSummaryText: $("reportSummaryText"),
-
     reportDate: $("reportDateText"),
     reportFindings: $("reportFindingsText"),
 
-    timeline: $("activityTimeline"),
+    activityTimeline: $("activityTimeline"),
 
     downloadReport: $("downloadReportBtn"),
-    exportReport: $("downloadReportBtn"),
 
     findingModal: $("findingModal"),
-
     closeFindingModal: $("closeFindingModal"),
     closeFindingModalSecondary: $("closeFindingModalSecondary"),
 
     findingModalTitle: $("findingModalTitle"),
-
     modalSeverity: $("modalSeverity"),
     modalLocation: $("modalFindingLocation"),
 
@@ -272,11 +287,11 @@
     footerStatus: $("workspaceFooterStatus")
   };
 
-  // ============================================================
-  // BASIC UTILITIES
-  // ============================================================
+  // =========================================================================
+  // 4. GENERAL UTILITIES
+  // =========================================================================
 
-  function text(value, fallback = "—") {
+  function safeText(value, fallback = "—") {
     if (
       value === null ||
       value === undefined ||
@@ -288,114 +303,54 @@
     return String(value);
   }
 
-  function truncate(value, max = 190) {
-    const valueText = text(value, "");
+  function truncate(value, maximum = 200) {
+    const result = safeText(value, "");
 
-    return valueText.length > max
-      ? `${valueText.slice(0, max).trimEnd()}…`
-      : valueText;
+    return result.length > maximum
+      ? `${result.slice(0, maximum).trimEnd()}…`
+      : result;
   }
 
-  function escapePath(path) {
-    const raw = String(path || "")
-      .replace(/\\/g, "/")
-      .trim();
+  function makeElement(tag, className = "", content = null) {
+    const element = document.createElement(tag);
 
-    if (
-      !raw ||
-      raw.startsWith("/") ||
-      /^[a-zA-Z]:/.test(raw) ||
-      raw.includes("\0") ||
-      /[\u0000-\u001F]/.test(raw)
-    ) {
-      return "";
+    if (className) {
+      element.className = className;
     }
 
-    const segments = raw.split("/").filter(Boolean);
-
-    if (
-      !segments.length ||
-      segments.some(
-        (part) =>
-          part === "." ||
-          part === ".."
-      )
-    ) {
-      return "";
+    if (content !== null && content !== undefined) {
+      element.textContent = String(content);
     }
 
-    return segments.join("/");
+    return element;
   }
 
-  function fileLanguage(path) {
-    const ext = String(path)
-      .split(".")
-      .pop()
-      .toLowerCase();
-
-    const map = {
-      py: "PYTHON",
-      html: "HTML",
-      htm: "HTML",
-      css: "CSS",
-      js: "JAVASCRIPT",
-      mjs: "JAVASCRIPT",
-      cjs: "JAVASCRIPT",
-      ts: "TYPESCRIPT",
-      tsx: "TSX",
-      jsx: "JSX",
-      json: "JSON",
-      sql: "SQL",
-      md: "MARKDOWN",
-      yml: "YAML",
-      yaml: "YAML",
-      xml: "XML",
-      java: "JAVA",
-      php: "PHP",
-      sh: "SHELL",
-      txt: "TEXT",
-      env: "ENV",
-      toml: "TOML",
-      lock: "LOCKFILE"
-    };
-
-    return map[ext] || "TEXT";
+  function setText(element, value, fallback = "—") {
+    if (element) {
+      element.textContent = safeText(value, fallback);
+    }
   }
 
-  function formatTime(value) {
-    if (!value) {
-      return "TIME NOT PROVIDED";
-    }
+  function setError(element, message = "") {
+    if (!element) return;
 
-    const date = new Date(value);
+    element.textContent = message;
+    element.hidden = !message;
+  }
 
-    if (Number.isNaN(date.getTime())) {
-      return String(value);
-    }
+  function announce(message) {
+    if (!els.live) return;
 
-    return date.toLocaleString([], {
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit"
+    els.live.textContent = "";
+
+    window.requestAnimationFrame(() => {
+      els.live.textContent = message;
     });
   }
 
-  function makeElement(tag, className, content) {
-    const node = document.createElement(tag);
-
-    if (className) {
-      node.className = className;
-    }
-
-    if (content !== undefined) {
-      node.textContent = String(content);
-    }
-
-    return node;
-  }
-
   function showToast(message, type = "info") {
+    if (!els.toast) return;
+
     const toast = makeElement(
       "div",
       `toast ${type}`,
@@ -406,64 +361,108 @@
 
     window.setTimeout(() => {
       toast.remove();
-    }, 4200);
+    }, 4500);
   }
 
-  function announce(message) {
-    els.live.textContent = "";
+  function normalizePath(path) {
+    if (typeof path !== "string") return "";
 
-    window.requestAnimationFrame(() => {
-      els.live.textContent = message;
+    let value = path.trim().replace(/\\/g, "/");
+
+    if (
+      !value ||
+      value.startsWith("/") ||
+      /^[A-Za-z]:/.test(value) ||
+      value.includes("\0") ||
+      /[\u0000-\u001F]/.test(value)
+    ) {
+      return "";
+    }
+
+    value = value.replace(/\/+/g, "/");
+
+    const parts = value.split("/").filter(Boolean);
+
+    if (
+      !parts.length ||
+      parts.some((part) =>
+        part === "." ||
+        part === ".." ||
+        part.includes(":")
+      )
+    ) {
+      return "";
+    }
+
+    return parts.join("/");
+  }
+
+  function languageForPath(path) {
+    const extension = String(path)
+      .split(".")
+      .pop()
+      .toLowerCase();
+
+    const types = {
+      py: "PYTHON",
+      html: "HTML",
+      htm: "HTML",
+      css: "CSS",
+      js: "JAVASCRIPT",
+      mjs: "JAVASCRIPT",
+      cjs: "JAVASCRIPT",
+      jsx: "JSX",
+      ts: "TYPESCRIPT",
+      tsx: "TSX",
+      json: "JSON",
+      sql: "SQL",
+      java: "JAVA",
+      php: "PHP",
+      md: "MARKDOWN",
+      yml: "YAML",
+      yaml: "YAML",
+      xml: "XML",
+      sh: "SHELL",
+      txt: "TEXT",
+      toml: "TOML",
+      env: "ENV"
+    };
+
+    return types[extension] || "TEXT";
+  }
+
+  function formatDate(value) {
+    if (!value) return "Not available";
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+      return String(value);
+    }
+
+    return date.toLocaleString([], {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit"
     });
   }
 
-  function setConnection(label, mode = "neutral") {
-    els.connection.classList.remove(
-      "is-online",
-      "is-offline"
-    );
-
-    if (mode === "online") {
-      els.connection.classList.add("is-online");
-    }
-
-    if (mode === "offline") {
-      els.connection.classList.add("is-offline");
-    }
-
-    const dot = els.connection.querySelector(".status-dot");
-
-    if (dot) {
-      dot.className = `status-dot ${
-        mode === "offline"
-          ? "warning"
-          : mode === "neutral"
-            ? "muted"
-            : ""
-      }`;
-    }
-
-    els.connection.lastChild.textContent = ` ${label}`;
+  function safeFileName(value) {
+    return String(value || "phase4-project")
+      .normalize("NFKC")
+      .replace(/[\\/:*?"<>|\u0000-\u001F]/g, "-")
+      .replace(/\s+/g, "-")
+      .replace(/\.+$/g, "")
+      .slice(0, 90) || "phase4-project";
   }
 
-  function setInlineError(element, message) {
-    element.textContent = message || "";
-    element.hidden = !message;
-  }
+  // =========================================================================
+  // 5. SESSION STORAGE
+  // =========================================================================
 
-  // ============================================================
-  // SESSION STORAGE
-  // ============================================================
-
-  function getAuthToken() {
-    try {
-      return sessionStorage.getItem(TOKEN_KEY) || "";
-    } catch {
-      return "";
-    }
-  }
-
-  function safeSessionGet(key) {
+  function storageGet(key) {
     try {
       return sessionStorage.getItem(key);
     } catch {
@@ -471,7 +470,7 @@
     }
   }
 
-  function safeSessionSet(key, value) {
+  function storageSet(key, value) {
     try {
       sessionStorage.setItem(key, value);
       return true;
@@ -480,21 +479,66 @@
     }
   }
 
-  function safeSessionRemove(key) {
+  function storageRemove(key) {
     try {
       sessionStorage.removeItem(key);
     } catch {
-      // Storage can be blocked by browser settings.
+      // Storage might be disabled by browser policy.
     }
   }
 
-  function saveActiveJob() {
-    if (!state.activeJob || !state.projectId) {
-      return;
+  function getAuthToken() {
+    /*
+     * Prefer the site's existing authenticated-token provider.
+     * Do not generate or expose a Gemini API key in this script.
+     */
+    if (
+      typeof window.WEBLAB_AUTH?.getToken === "function"
+    ) {
+      const value = window.WEBLAB_AUTH.getToken();
+
+      if (typeof value === "string" && value.trim()) {
+        return value.trim();
+      }
     }
 
-    safeSessionSet(
-      ACTIVE_JOB_KEY,
+    const keys = [
+      "google_id_token",
+      "googleIdToken",
+      "id_token"
+    ];
+
+    for (const key of keys) {
+      const sessionValue = storageGet(key);
+
+      if (sessionValue) return sessionValue;
+
+      try {
+        const localValue = localStorage.getItem(key);
+
+        if (localValue) return localValue;
+      } catch {
+        // Local storage may be blocked.
+      }
+    }
+
+    return "";
+  }
+
+  function saveCurrentProject() {
+    if (state.projectId) {
+      storageSet(
+        STORAGE_KEYS.currentProject,
+        state.projectId
+      );
+    }
+  }
+
+  function saveCurrentJob() {
+    if (!state.activeJob || !state.projectId) return;
+
+    storageSet(
+      STORAGE_KEYS.activeJob,
       JSON.stringify({
         ...state.activeJob,
         projectId: state.projectId,
@@ -503,45 +547,21 @@
     );
   }
 
-  function clearSavedActiveJob() {
-    safeSessionRemove(ACTIVE_JOB_KEY);
+  function clearSavedJob() {
+    storageRemove(STORAGE_KEYS.activeJob);
   }
 
-  function restoreActiveJob() {
-    if (state.demo || !state.projectId) {
-      return false;
-    }
-
-    // Preserve in-memory jobs if sessionStorage is unavailable.
-    if (
-      state.activeJob &&
-      (
-        !state.activeJob.projectId ||
-        state.activeJob.projectId === state.projectId
-      )
-    ) {
-      state.activeJob.projectId = state.projectId;
-      state.pollCount = 0;
-      state.pollRetryCount = 0;
-      state.jobPollingPaused = false;
-
-      return true;
-    }
+  function restoreSavedJob() {
+    if (!state.projectId) return false;
 
     try {
       const saved = JSON.parse(
-        safeSessionGet(ACTIVE_JOB_KEY) || "null"
+        storageGet(STORAGE_KEYS.activeJob) || "null"
       );
 
       if (
-        !saved ||
-        !saved.id ||
-        saved.projectId !== state.projectId
-      ) {
-        return false;
-      }
-
-      if (
+        !saved?.id ||
+        saved.projectId !== state.projectId ||
         !["build", "security"].includes(saved.kind)
       ) {
         return false;
@@ -554,48 +574,20 @@
       };
 
       state.pollCount = 0;
-      state.pollRetryCount = 0;
-      state.jobPollingPaused = false;
+      state.retryCount = 0;
+      state.pollingPaused = false;
 
       return true;
 
     } catch {
-      clearSavedActiveJob();
+      clearSavedJob();
       return false;
     }
   }
 
-  function loadSavedActivity() {
-    if (!state.projectId) return;
-
-    try {
-      const saved = JSON.parse(
-        safeSessionGet(
-          `${ACTIVITY_KEY_PREFIX}${state.projectId}`
-        ) || "[]"
-      );
-
-      state.activity = Array.isArray(saved)
-        ? saved.slice(0, 30)
-        : [];
-
-    } catch {
-      state.activity = [];
-    }
-  }
-
-  function saveActivity() {
-    if (!state.projectId) return;
-
-    safeSessionSet(
-      `${ACTIVITY_KEY_PREFIX}${state.projectId}`,
-      JSON.stringify(state.activity.slice(0, 30))
-    );
-  }
-
-  // ============================================================
-  // API COMMUNICATION
-  // ============================================================
+  // =========================================================================
+  // 6. AUTHENTICATED API CLIENT
+  // =========================================================================
 
   async function parseResponse(response) {
     const contentType =
@@ -608,10 +600,10 @@
       return response.json().catch(() => ({}));
     }
 
-    const body = await response.text().catch(() => "");
+    const message = await response.text().catch(() => "");
 
-    return body
-      ? { message: body.slice(0, 600) }
+    return message
+      ? { message: message.slice(0, 1000) }
       : {};
   }
 
@@ -669,7 +661,7 @@
 
     } catch (cause) {
       const error = new Error(
-        "Could not reach the Phase 4 backend. Check your connection and confirm that the backend is awake."
+        "Could not reach the Phase 4 backend. Check the configured backend URL and your internet connection."
       );
 
       error.cause = cause;
@@ -680,14 +672,13 @@
     const data = await parseResponse(response);
 
     if (!response.ok) {
-      const message =
+      const error = new Error(
         typeof data?.error === "string"
           ? data.error
           : typeof data?.message === "string"
             ? data.message
-            : `The Phase 4 API returned HTTP ${response.status}.`;
-
-      const error = new Error(message);
+            : `The Phase 4 API returned HTTP ${response.status}.`
+      );
 
       error.status = response.status;
       error.data = data;
@@ -696,229 +687,191 @@
         response.headers.get("Retry-After")
       );
 
-      if (
-        Number.isFinite(retryAfter) &&
-        retryAfter > 0
-      ) {
+      if (Number.isFinite(retryAfter) && retryAfter > 0) {
         error.retryAfterMs = retryAfter * 1000;
       }
 
       throw error;
     }
 
-    return {
-      response,
-      data
-    };
+    return { response, data };
   }
 
-  function friendlyApiError(error) {
-    if (error?.status === 401) {
-      return "Your sign-in session has expired. Sign in again and reload this project.";
-    }
+  function friendlyError(error) {
+    switch (Number(error?.status)) {
+      case 400:
+        return error.message || "The request is invalid.";
 
-    if (error?.status === 403) {
-      return "Your account is not authorised to access this Phase 4 project or feature.";
-    }
+      case 401:
+        return "Your sign-in session has expired. Sign in again and reload Phase 4.";
 
-    if (error?.status === 404) {
-      return "This Phase 4 endpoint or project was not found. The frontend is ready, but the matching Flask route may not be implemented or deployed yet.";
-    }
+      case 403:
+        return "Your account is not authorised to use this Phase 4 feature.";
 
-    if (error?.status === 429) {
-      return "The request limit has been reached. Wait before starting another generation or scan.";
-    }
+      case 404:
+        return error.message || "The Phase 4 endpoint or project was not found. Check that the matching backend route is deployed.";
 
-    if (error?.status === 503) {
-      return "The Phase 4 service is temporarily unavailable. Try again later.";
-    }
+      case 409:
+        return error.message || "The project is currently busy or its state has changed.";
 
-    return error?.message ||
-      "An unexpected error occurred.";
+      case 413:
+        return "The submitted project or prompt exceeds the configured size limit.";
+
+      case 429:
+        return error.message || "The request limit has been reached. Please wait before retrying.";
+
+      case 502:
+        return error.message || "The AI provider request failed. Try again.";
+
+      case 503:
+        return error.message || "The Phase 4 backend is temporarily unavailable.";
+
+      default:
+        return error?.message || "An unexpected error occurred.";
+    }
   }
 
-  // ============================================================
-  // DEMO DATA
-  // ============================================================
-
-  function getDemoProject() {
-    return {
-      project_id: "demo-project",
-
-      root_name: "commerce-studio",
-
-      project: {
-        original_idea:
-          "Build an e-commerce platform where customers can browse products, manage a cart, place orders and track order status. Administrators can manage the catalogue and inventory.",
-
-        framework: "flask",
-
-        database: "mysql",
-
-        project_summary:
-          "A Flask and MySQL commerce application with a customer storefront, order workflows and an administrative catalogue.",
-
-        name: "Commerce Studio"
-      },
-
-      structure: {
-        folders: [
-          { path: "backend", type: "folder" },
-          { path: "backend/app.py", type: "file" },
-          { path: "backend/db.py", type: "file" },
-          { path: "backend/config.py", type: "file" },
-          { path: "backend/routes/products.py", type: "file" },
-          { path: "backend/routes/orders.py", type: "file" },
-          { path: "backend/services/payment_service.py", type: "file" },
-          { path: "backend/models/product.py", type: "file" },
-          { path: "backend/models/order.py", type: "file" },
-          { path: "frontend", type: "folder" },
-          { path: "frontend/index.html", type: "file" },
-          { path: "frontend/assets/style.css", type: "file" },
-          { path: "frontend/assets/app.js", type: "file" },
-          { path: "tests/test_orders.py", type: "file" },
-          { path: "requirements.txt", type: "file" },
-          { path: ".env.example", type: "file" },
-          { path: "README.md", type: "file" }
-        ]
-      },
-
-      master_prompt:
-        "DEMO PREVIEW ONLY — This is sample project context, not a real saved Phase 3 blueprint.",
-
-      generated_files: [
-        {
-          path: "backend/app.py",
-          language: "python",
-          content:
-            "from flask import Flask\nfrom routes.products import products_bp\nfrom routes.orders import orders_bp\n\napp = Flask(__name__)\napp.register_blueprint(products_bp, url_prefix=\"/api/products\")\napp.register_blueprint(orders_bp, url_prefix=\"/api/orders\")\n\nif __name__ == \"__main__\":\n    app.run(debug=False)\n"
-        },
-
-        {
-          path: "backend/db.py",
-          language: "python",
-          content:
-            "import os\nimport mysql.connector\n\ndef get_connection():\n    return mysql.connector.connect(\n        host=os.environ[\"DB_HOST\"],\n        user=os.environ[\"DB_USER\"],\n        password=os.environ[\"DB_PASSWORD\"],\n        database=os.environ[\"DB_NAME\"],\n    )\n"
-        },
-
-        {
-          path: "frontend/index.html",
-          language: "html",
-          content:
-            "<!doctype html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"utf-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n  <title>Commerce Studio</title>\n</head>\n<body>\n  <main id=\"app\">\n    <h1>Commerce Studio</h1>\n  </main>\n</body>\n</html>\n"
-        }
-      ],
-
-      security_report: {
-        status: "demo",
-
-        generated_at: "2026-11-09T10:00:00Z",
-
-        findings: [
-          {
-            id: "DEMO-001",
-
-            title: "Example: Missing object ownership check",
-
-            severity: "high",
-
-            confidence: "potential",
-
-            status: "potential",
-
-            file: "backend/routes/orders.py",
-
-            line: 28,
-
-            description:
-              "Sample finding only. The demo shows how a possible access-control issue may be presented.",
-
-            attack_scenario:
-              "A user might attempt to request an order belonging to another account if the route does not check ownership.",
-
-            recommendation:
-              "Verify the authenticated user's ownership of the requested order on every read and update operation."
-          },
-
-          {
-            id: "DEMO-002",
-
-            title: "Example: Overly broad CORS policy",
-
-            severity: "medium",
-
-            confidence: "potential",
-
-            status: "potential",
-
-            file: "backend/app.py",
-
-            line: 6,
-
-            description:
-              "Sample finding only. This is not the result of running a scanner.",
-
-            attack_scenario:
-              "An overly broad cross-origin policy can expose browser-accessible responses in an unintended origin context.",
-
-            recommendation:
-              "Allow only trusted production origins and do not combine wildcard origins with credentials."
-          }
-        ]
-      }
-    };
-  }
-
-  // ============================================================
-  // PROJECT NORMALISATION
-  // ============================================================
+  // =========================================================================
+  // 7. NORMALIZE MASTER-PROMPT ANALYSIS RESPONSE
+  // =========================================================================
 
   function normalizeProject(payload) {
-    const project =
-      payload?.project ||
-      payload?.blueprint ||
-      payload ||
-      {};
+    const source =
+      payload?.project && typeof payload.project === "object"
+        ? payload.project
+        : payload || {};
 
     const structure =
-      project.structure ||
+      source.structure ||
       payload?.structure ||
       {};
-
-    const root = text(
-      project.root_name ||
-      payload?.root_name ||
-      structure.root_name,
-
-      "project"
-    );
 
     const folders =
       Array.isArray(structure.folders)
         ? structure.folders
-        : Array.isArray(project.folders)
-          ? project.folders
+        : Array.isArray(source.folders)
+          ? source.folders
           : Array.isArray(payload?.folders)
             ? payload.folders
             : [];
 
-    let generatedFiles =
-      project.generated_files ||
-      payload?.generated_files ||
-      project.files ||
-      payload?.files ||
-      project.output_files ||
-      payload?.output_files ||
-      project.artifacts ||
-      payload?.artifacts ||
-      [];
+    return {
+      id: String(
+        source.project_id ||
+        source.id ||
+        payload?.project_id ||
+        payload?.id ||
+        state.projectId ||
+        ""
+      ),
 
-    if (
-      !Array.isArray(generatedFiles) &&
-      generatedFiles &&
-      typeof generatedFiles === "object"
-    ) {
-      generatedFiles = Object.entries(generatedFiles).map(
+      name: safeText(
+        source.name ||
+        source.project_name ||
+        source.root_name ||
+        payload?.root_name,
+        "New project"
+      ),
+
+      rootName: safeText(
+        source.root_name ||
+        structure.root_name ||
+        payload?.root_name,
+        "project"
+      ),
+
+      idea: safeText(
+        source.original_idea ||
+        source.idea ||
+        source.project_idea,
+        ""
+      ),
+
+      summary: safeText(
+        source.project_summary ||
+        source.summary ||
+        source.description,
+        "No project summary was provided."
+      ),
+
+      framework: safeText(
+        source.framework ||
+        source.stack ||
+        source.technology_stack,
+        "Not specified"
+      ),
+
+      database: safeText(
+        source.database_name ||
+        source.database ||
+        source.db,
+        "Not specified"
+      ),
+
+      masterPrompt: safeText(
+        source.master_prompt ||
+        source.coding_prompt ||
+        payload?.master_prompt,
+        ""
+      ),
+
+      languages: Array.isArray(source.languages)
+        ? source.languages
+        : [],
+
+      features: Array.isArray(source.features)
+        ? source.features
+        : [],
+
+      userRoles: Array.isArray(source.user_roles)
+        ? source.user_roles
+        : [],
+
+      entryPoints: Array.isArray(source.entry_points)
+        ? source.entry_points
+        : [],
+
+      endpoints: Array.isArray(source.routes_endpoints)
+        ? source.routes_endpoints
+        : Array.isArray(source.endpoints)
+          ? source.endpoints
+          : [],
+
+      dependencies: Array.isArray(source.dependencies)
+        ? source.dependencies
+        : [],
+
+      integrations: Array.isArray(source.external_integrations)
+        ? source.external_integrations
+        : [],
+
+      folders,
+
+      generatedFiles: normalizeFileList(
+        source.generated_files ||
+        payload?.generated_files ||
+        []
+      ),
+
+      report:
+        source.security_report ||
+        payload?.security_report ||
+        null,
+
+      createdAt:
+        source.created_at ||
+        payload?.created_at ||
+        null,
+
+      raw: payload
+    };
+  }
+
+  function normalizeFileList(value) {
+    if (Array.isArray(value)) return value;
+
+    if (value && typeof value === "object") {
+      return Object.entries(value).map(
         ([path, content]) => ({
           path,
           content
@@ -926,144 +879,60 @@
       );
     }
 
-    if (!Array.isArray(generatedFiles)) {
-      generatedFiles = [];
+    return [];
+  }
+
+  function getFileContent(file) {
+    if (typeof file?.content === "string") {
+      return file.content;
     }
 
+    if (typeof file?.code === "string") {
+      return file.code;
+    }
+
+    if (typeof file?.source === "string") {
+      return file.source;
+    }
+
+    if (typeof file?.text === "string") {
+      return file.text;
+    }
+
+    return "";
+  }
+
+  // =========================================================================
+  // 8. PROJECT FILE TREE
+  // =========================================================================
+
+  function createTreeNode(name, type, path) {
     return {
-      id: text(
-        project.project_id ||
-        project.id ||
-        payload?.project_id ||
-        payload?.id ||
-        state.projectId,
-
-        ""
-      ),
-
-      rootName: root,
-
-      name: text(
-        project.name ||
-        project.project_name ||
-        root,
-
-        root
-      ),
-
-      idea: text(
-        project.original_idea ||
-        project.idea ||
-        project.project_idea,
-
-        ""
-      ),
-
-      framework: text(
-        project.framework ||
-        project.stack ||
-        project.technology_stack,
-
-        "Not specified"
-      ),
-
-      database: text(
-        project.database_name ||
-        project.database ||
-        project.db,
-
-        "Not specified"
-      ),
-
-      summary: text(
-        project.project_summary ||
-        project.summary ||
-        project.description,
-
-        "No project summary was provided in the Phase 3 blueprint."
-      ),
-
-      folders,
-
-      treePreview: text(
-        project.tree_preview ||
-        structure.tree_preview ||
-        project.tree ||
-        payload?.tree_preview,
-
-        ""
-      ),
-
-      masterPrompt: text(
-        project.master_prompt ||
-        project.coding_prompt ||
-        payload?.master_prompt,
-
-        ""
-      ),
-
-      generatedFiles,
-
-      raw: payload,
-
-      report:
-        project.security_report ||
-        payload?.security_report ||
-        null,
-
-      createdAt:
-        project.created_at ||
-        payload?.created_at ||
-        null
+      name,
+      type,
+      path,
+      children: new Map()
     };
   }
 
-  // ============================================================
-  // FILE TREE MODEL
-  // ============================================================
+  function buildProjectTree(entries, rootName) {
+    const root = createTreeNode(
+      rootName,
+      "folder",
+      ""
+    );
 
-  function buildTreeModel(entries, rootName) {
-    const root = {
-      name: rootName,
-      type: "folder",
-      children: new Map(),
-      path: ""
-    };
-
-    let skipped = 0;
-
-    for (const entry of entries || []) {
-      if (
-        entry === null ||
-        entry === undefined
-      ) {
-        skipped += 1;
-        continue;
-      }
-
+    for (const item of entries || []) {
       const rawPath =
-        typeof entry === "string"
-          ? entry
-          : entry?.path || entry?.name || "";
+        typeof item === "string"
+          ? item
+          : item?.path || item?.name || "";
 
-      const rawNormalized = String(rawPath)
-        .replace(/\\/g, "/")
-        .trim();
+      const path = normalizePath(rawPath);
 
-      const directoryHint =
-        rawNormalized.endsWith("/") ||
-        ["folder", "directory", "dir"].includes(
-          String(entry?.type || "").toLowerCase()
-        );
+      if (!path) continue;
 
-      const safePath = escapePath(rawPath);
-
-      if (!safePath) {
-        skipped += 1;
-        continue;
-      }
-
-      let segments = safePath.split("/");
+      let segments = path.split("/");
 
       if (
         segments[0]?.toLowerCase() ===
@@ -1074,69 +943,68 @@
 
       if (!segments.length) continue;
 
-      let node = root;
+      const typeValue =
+        typeof item === "object"
+          ? String(item.type || "").toLowerCase()
+          : "";
+
+      const isFolder = [
+        "folder",
+        "directory",
+        "dir"
+      ].includes(typeValue) || String(rawPath).endsWith("/");
+
+      let current = root;
       let currentPath = "";
 
-      segments.forEach((segment, index) => {
+      for (let index = 0; index < segments.length; index += 1) {
+        const name = segments[index];
+
         currentPath = currentPath
-          ? `${currentPath}/${segment}`
-          : segment;
+          ? `${currentPath}/${name}`
+          : name;
 
-        const isLast =
-          index === segments.length - 1;
+        const last = index === segments.length - 1;
 
-        const statedType =
-          entry && typeof entry === "object"
-            ? String(entry.type || "").toLowerCase()
-            : "";
+        const nodeType =
+          !last || isFolder
+            ? "folder"
+            : "file";
 
-        const isFolder =
-          !isLast ||
-          directoryHint ||
-          ["folder", "directory", "dir"].includes(statedType);
+        if (!current.children.has(name)) {
+          current.children.set(
+            name,
+            createTreeNode(
+              name,
+              nodeType,
+              currentPath
+            )
+          );
 
-        // Preserve case-sensitive filenames.
-        const key = segment;
-
-        if (!node.children.has(key)) {
-          node.children.set(key, {
-            name: segment,
-            type: isFolder ? "folder" : "file",
-            path: currentPath,
-            children: new Map()
-          });
-
-        } else if (
-          isFolder &&
-          node.children.get(key).type !== "folder"
-        ) {
-          node.children.get(key).type = "folder";
+        } else if (nodeType === "folder") {
+          current.children.get(name).type = "folder";
         }
 
-        node = node.children.get(key);
-      });
+        current = current.children.get(name);
+      }
     }
 
-    function sortChildren(node) {
+    function sortTree(node) {
       return [...node.children.values()]
         .sort((a, b) => {
           if (a.type !== b.type) {
             return a.type === "folder" ? -1 : 1;
           }
 
-          return a.name.localeCompare(
-            b.name,
-            undefined,
-            { sensitivity: "base" }
-          );
+          return a.name.localeCompare(b.name);
         })
         .map((child) => ({
           ...child,
-          children: sortChildren(child)
+          children: sortTree(child)
         }));
     }
 
-    const children = sortChildren(root);
+    const sorted = sortTree(root);
 
     let folderCount = 0;
     let fileCount = 0;
@@ -1153,91 +1021,164 @@
       }
     }
 
-    count(children);
+    count(sorted);
 
     return {
       root: {
         ...root,
-        children
+        children: sorted
       },
-
       folderCount,
-      fileCount,
-      skipped
+      fileCount
     };
   }
 
-  // ============================================================
-  // FILE NORMALISATION
-  // ============================================================
+  // =========================================================================
+  // 9. PROJECT SUMMARY
+  // =========================================================================
 
-  function normalizeFileItems(items) {
-    if (Array.isArray(items)) {
-      return items;
-    }
-
-    if (
-      items &&
-      typeof items === "object"
-    ) {
-      return Object.entries(items).map(
-        ([path, value]) => {
-          if (
-            value &&
-            typeof value === "object"
-          ) {
-            return {
-              path,
-              ...value
-            };
-          }
-
-          return {
-            path,
-            content:
-              typeof value === "string"
-                ? value
-                : ""
-          };
-        }
-      );
-    }
-
-    return [];
+  function initials(value) {
+    return String(value || "P")
+      .replace(/[^a-zA-Z0-9 ]/g, " ")
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0])
+      .join("")
+      .toUpperCase() || "P";
   }
 
-  function fileContent(item) {
-    if (typeof item?.content === "string") {
-      return item.content;
+  function renderProjectSummary() {
+    const p = state.project;
+
+    if (!p) return;
+
+    const name = p.name;
+
+    setText(els.sidebarProjectName, name);
+    setText(
+      els.sidebarProjectStack,
+      `${p.framework} · ${p.database}`
+    );
+
+    setText(els.projectMonogram, initials(name));
+    setText(els.projectLoadBadge, "LOADED");
+
+    setText(els.projectName, name);
+    setText(els.projectDescription, p.summary);
+
+    setText(els.projectFramework, p.framework);
+    setText(els.projectDatabase, p.database);
+
+    setText(
+      els.projectFileCount,
+      `${state.tree?.fileCount || 0} planned`
+    );
+
+    setText(
+      els.summaryProjectIcon,
+      initials(name)
+    );
+
+    setText(
+      els.contextIdea,
+      [
+        p.idea,
+        p.features.length
+          ? `Features: ${p.features.slice(0, 10).join(" · ")}`
+          : ""
+      ].filter(Boolean).join("\n\n") ||
+      "No project description was extracted."
+    );
+
+    setText(
+      els.contextStack,
+      [
+        p.framework,
+        p.database,
+        p.languages.length
+          ? `Languages: ${p.languages.join(", ")}`
+          : ""
+      ].filter(Boolean).join(" · ")
+    );
+
+    setText(
+      els.contextStructure,
+      `${state.tree?.folderCount || 0} folders · ${state.tree?.fileCount || 0} files · ${p.entryPoints.length} entry points · ${p.endpoints.length} routes/endpoints`
+    );
+
+    setText(
+      els.projectAnalysisContext,
+      `${p.framework} · ${p.database} · ${state.tree?.fileCount || 0} manifest files`
+    );
+
+    setText(
+      els.projectOrigin,
+      "INDEPENDENT MASTER PROMPT"
+    );
+
+    setText(
+      els.projectStateText,
+      "Project analysed"
+    );
+
+    if (els.projectStateDot) {
+      els.projectStateDot.className = "status-dot";
     }
 
-    if (typeof item?.code === "string") {
-      return item.code;
+    setText(
+      els.sidebarProjectSpecStatus,
+      "Loaded"
+    );
+
+    setText(
+      els.sidebarBuildStatus,
+      state.files.size
+        ? "Generated"
+        : "Not started"
+    );
+
+    setText(
+      els.sidebarScanStatus,
+      state.report
+        ? "Available"
+        : "Not tested"
+    );
+
+    setText(
+      els.fileRootLabel,
+      p.rootName.toUpperCase()
+    );
+
+    setText(
+      els.filesCountBadge,
+      `${state.tree?.fileCount || 0} FILES IN MANIFEST`
+    );
+
+    if (els.exportProject) {
+      els.exportProject.disabled = state.files.size === 0;
     }
 
-    if (typeof item?.source === "string") {
-      return item.source;
+    if (els.footerStatus) {
+      els.footerStatus.textContent =
+        `Independent project · ${p.id}`;
     }
 
-    if (typeof item?.text === "string") {
-      return item.text;
-    }
-
-    return "";
+    syncControls();
   }
+
+  // =========================================================================
+  // 10. FILE STORAGE AND PREVIEW
+  // =========================================================================
 
   function loadGeneratedFiles(items) {
     state.files.clear();
 
-    for (const item of normalizeFileItems(items)) {
-      if (
-        !item ||
-        typeof item !== "object"
-      ) {
-        continue;
-      }
+    for (const item of normalizeFileList(items)) {
+      if (!item || typeof item !== "object") continue;
 
-      const path = escapePath(
+      const path = normalizePath(
         item.path ||
         item.filename ||
         item.name ||
@@ -1248,161 +1189,492 @@
 
       state.files.set(path, {
         path,
-
-        content: fileContent(item),
-
-        language: text(
+        content: getFileContent(item),
+        language: safeText(
           item.language,
-          fileLanguage(path)
+          languageForPath(path)
         ),
-
-        status: text(
-          item.status,
-          "Generated"
-        ),
-
+        status: safeText(item.status, "Generated"),
         generated: true
       });
     }
   }
 
-  // ============================================================
-  // PROJECT DISPLAY
-  // ============================================================
+  function addGeneratedFiles(items) {
+    for (const item of normalizeFileList(items)) {
+      if (!item || typeof item !== "object") continue;
 
-  function getProjectDisplayName() {
-    return (
-      state.project?.name ||
-      state.project?.rootName ||
-      "Project workspace"
+      const path = normalizePath(
+        item.path ||
+        item.filename ||
+        item.name ||
+        ""
+      );
+
+      if (!path) continue;
+
+      state.files.set(path, {
+        path,
+        content: getFileContent(item),
+        language: safeText(
+          item.language,
+          languageForPath(path)
+        ),
+        status: safeText(item.status, "Generated"),
+        generated: true
+      });
+
+      if (
+        !state.manifest.some(
+          (entry) =>
+            String(entry.path || entry).replace(/\/$/, "").toLowerCase() === path.toLowerCase()
+        )
+      ) {
+        state.manifest.push({
+          path,
+          type: "file",
+          purpose: "Generated project file."
+        });
+      }
+    }
+
+    state.tree = buildProjectTree(
+      state.manifest,
+      state.project.rootName
     );
-  }
 
-  function projectInitials(name) {
-    const words = text(name, "P")
-      .replace(/[^a-zA-Z0-9 ]/g, " ")
-      .trim()
-      .split(/\s+/)
-      .filter(Boolean);
+    renderFileTree(els.fileSearch?.value || "");
 
-    return (
-      words.slice(0, 2)
-        .map((word) => word[0])
-        .join("")
-        .toUpperCase() ||
-      "P"
+    setText(
+      els.projectFileCount,
+      `${state.tree.fileCount} files`
     );
+
+    if (state.files.size > 0) {
+      const selected =
+        state.selectedFile &&
+        state.files.has(state.selectedFile)
+          ? state.selectedFile
+          : state.files.keys().next().value;
+
+      selectFile(selected);
+    }
+
+    if (els.exportProject) {
+      els.exportProject.disabled = state.files.size === 0;
+    }
   }
 
-  function renderProjectSummary() {
-    const p = state.project;
+  // =========================================================================
+  // 11. FILE EXPLORER RENDERING
+  // =========================================================================
 
-    if (!p) return;
+  function makeFileMark(name) {
+    const extension = String(name)
+      .split(".")
+      .pop()
+      .toLowerCase();
 
-    const name = getProjectDisplayName();
+    const marks = {
+      py: "Py",
+      html: "<>",
+      css: "#",
+      js: "JS",
+      ts: "TS",
+      json: "{}",
+      sql: "DB",
+      md: "M",
+      yml: "Y",
+      yaml: "Y",
+      env: "•"
+    };
 
-    const stack = p.framework.toUpperCase();
-
-    const database = p.database.toUpperCase();
-
-    const count = state.tree
-      ? `${state.tree.fileCount} planned`
-      : `${p.folders.length} entries`;
-
-    els.sidebarProjectName.textContent = name;
-
-    els.sidebarProjectStack.textContent =
-      `${stack} · ${database}`;
-
-    els.projectMonogram.textContent =
-      projectInitials(name);
-
-    els.projectLoadBadge.textContent =
-      state.demo ? "DEMO" : "LOADED";
-
-    els.projectName.textContent = name;
-
-    els.projectDescription.textContent = p.summary;
-
-    els.projectFramework.textContent =
-      p.framework;
-
-    els.projectDatabase.textContent =
-      p.database;
-
-    els.projectFileCount.textContent = count;
-
-    els.summaryProjectIcon.textContent =
-      projectInitials(name);
-
-    els.blueprintContext.textContent =
-      `${p.framework} · ${p.database} · ${state.tree?.fileCount || 0} planned files`;
-
-    els.contextIdea.textContent =
-      p.idea ||
-      "No original idea was included in the saved blueprint.";
-
-    els.contextStack.textContent =
-      `${p.framework} with ${p.database}. Backend validation remains authoritative.`;
-
-    els.contextStructure.textContent =
-      `${state.tree?.folderCount || 0} folders and ${state.tree?.fileCount || 0} files in the supplied structure.`;
-
-    els.fileRootLabel.textContent =
-      p.rootName.toUpperCase();
-
-    els.filesCountBadge.textContent =
-      `${state.tree?.fileCount || 0} FILES IN BLUEPRINT`;
-
-    els.projectOrigin.textContent =
-      state.demo
-        ? "DEMO PREVIEW — SAMPLE DATA"
-        : "PHASE 3 BLUEPRINT";
-
-    els.projectStateText.textContent =
-      state.demo
-        ? "Demo preview only"
-        : "Blueprint imported";
-
-    els.projectStateDot.className =
-      `status-dot ${state.demo ? "warning" : ""}`;
-
-    els.sidebarBlueprintStatus.textContent =
-      state.demo ? "Demo" : "Loaded";
-
-    els.sidebarBuildStatus.textContent =
-      state.files.size
-        ? "Generated"
-        : "Not started";
-
-    els.sidebarScanStatus.textContent =
-      state.report
-        ? "Available"
-        : "Not tested";
-
-    els.exportProject.disabled = state.demo;
-
-    els.buildButton.disabled = state.demo;
-
-    els.scanButton.disabled = state.demo;
-
-    els.projectFileCount.title =
-      `${state.tree?.folderCount || 0} folders · ${state.tree?.fileCount || 0} files`;
-
-    els.footerStatus.textContent =
-      state.demo
-        ? "Demo preview — no backend actions"
-        : `Project ${p.id || state.projectId}`;
+    return marks[extension] || "·";
   }
 
-  // ============================================================
-  // NAVIGATION
-  // ============================================================
+  function renderTreeNode(node, container, depth = 0) {
+    if (node.type === "folder") {
+      const wrapper = makeElement("div", "tree-node");
 
-  function setActiveView(view) {
-    if (!views.includes(view)) {
+      const button = makeElement("button", "tree-folder");
+
+      button.type = "button";
+
+      button.style.paddingLeft =
+        `${7 + depth * 8}px`;
+
+      button.setAttribute("aria-expanded", "true");
+
+      const caret = makeElement(
+        "span",
+        "folder-caret",
+        "⌄"
+      );
+
+      const mark = makeElement(
+        "span",
+        "file-type-mark",
+        "▰"
+      );
+
+      const label = makeElement(
+        "span",
+        "tree-folder-label",
+        node.name
+      );
+
+      button.append(caret, mark, label);
+
+      const children = makeElement(
+        "div",
+        "tree-indent"
+      );
+
+      node.children.forEach((child) => {
+        renderTreeNode(
+          child,
+          children,
+          depth + 1
+        );
+      });
+
+      button.addEventListener("click", () => {
+        const open =
+          button.getAttribute("aria-expanded") === "true";
+
+        button.setAttribute(
+          "aria-expanded",
+          String(!open)
+        );
+
+        children.hidden = open;
+      });
+
+      wrapper.append(button, children);
+
+      container.append(wrapper);
+
       return;
     }
+
+    const button = makeElement("button", "tree-file");
+
+    button.type = "button";
+    button.dataset.path = node.path;
+
+    button.style.paddingLeft =
+      `${7 + depth * 8}px`;
+
+    const mark = makeElement(
+      "span",
+      "file-type-mark",
+      makeFileMark(node.name)
+    );
+
+    const label = makeElement(
+      "span",
+      "tree-folder-label",
+      node.name
+    );
+
+    button.append(mark, label);
+
+    button.addEventListener("click", () => {
+      selectFile(node.path);
+    });
+
+    container.append(button);
+  }
+
+  function renderFileTree(filter = "") {
+    if (!els.fileTree) return;
+
+    els.fileTree.replaceChildren();
+
+    if (!state.tree?.root) {
+      els.fileTree.append(
+        makeElement(
+          "p",
+          "muted-empty",
+          "No project manifest is available."
+        )
+      );
+
+      setText(els.fileTreeCount, "0 ITEMS");
+
+      return;
+    }
+
+    const query = String(filter).trim().toLowerCase();
+
+    let fileCount = 0;
+    let folderCount = 0;
+
+    function filterNode(node) {
+      if (node.type === "file") {
+        const matches =
+          !query ||
+          node.path.toLowerCase().includes(query);
+
+        if (matches) fileCount += 1;
+
+        return matches ? node : null;
+      }
+
+      const children = node.children
+        .map(filterNode)
+        .filter(Boolean);
+
+      const matches =
+        !query ||
+        node.name.toLowerCase().includes(query) ||
+        children.length > 0;
+
+      if (
+        matches &&
+        node.name !== state.project?.rootName
+      ) {
+        folderCount += 1;
+      }
+
+      return matches
+        ? {
+            ...node,
+            children
+          }
+        : null;
+    }
+
+    const nodes = state.tree.root.children
+      .map(filterNode)
+      .filter(Boolean);
+
+    if (nodes.length === 0) {
+      els.fileTree.append(
+        makeElement(
+          "p",
+          "muted-empty",
+          query
+            ? "No files match your search."
+            : "No files are present in the project manifest."
+        )
+      );
+    } else {
+      nodes.forEach((node) => {
+        renderTreeNode(
+          node,
+          els.fileTree
+        );
+      });
+    }
+
+    setText(
+      els.fileTreeCount,
+      `${fileCount} FILES · ${folderCount} FOLDERS`
+    );
+
+    updateSelectedFile();
+  }
+
+  function updateSelectedFile() {
+    document.querySelectorAll(".tree-file").forEach((button) => {
+      const selected =
+        button.dataset.path === state.selectedFile;
+
+      button.classList.toggle(
+        "is-selected",
+        selected
+      );
+
+      if (selected) {
+        button.setAttribute("aria-current", "true");
+      } else {
+        button.removeAttribute("aria-current");
+      }
+    });
+  }
+
+  function selectFile(path) {
+    const safePath = normalizePath(path);
+
+    if (!safePath) return;
+
+    state.selectedFile = safePath;
+
+    const file = state.files.get(safePath);
+
+    const generated = Boolean(
+      file && file.generated
+    );
+
+    setText(
+      els.selectedFileName,
+      safePath.split("/").pop()
+    );
+
+    setText(
+      els.fileLanguage,
+      file?.language || languageForPath(safePath)
+    );
+
+    if (els.filePreviewEmpty) {
+      els.filePreviewEmpty.hidden = generated;
+    }
+
+    if (els.fileCodePreview) {
+      els.fileCodePreview.hidden = !generated;
+    }
+
+    if (els.fileCodeContent) {
+      els.fileCodeContent.textContent =
+        generated ? file.content : "";
+    }
+
+    setText(
+      els.filePreviewStatus,
+      generated
+        ? `${file.status.toUpperCase()} · ${file.content.length.toLocaleString()} CHARACTERS`
+        : "Manifest entry only — source code not generated yet"
+    );
+
+    if (els.copyFile) {
+      els.copyFile.disabled = !generated;
+    }
+
+    if (!generated && els.filePreviewEmpty) {
+      const title =
+        els.filePreviewEmpty.querySelector("strong");
+
+      const description =
+        els.filePreviewEmpty.querySelector("p");
+
+      if (title) {
+        title.textContent = "Source not generated yet";
+      }
+
+      if (description) {
+        description.textContent =
+          "This file is in the project manifest. Its source content will appear after the code-generation job completes.";
+      }
+    }
+
+    updateSelectedFile();
+  }
+
+  // =========================================================================
+  // 12. ACTIVITY TIMELINE
+  // =========================================================================
+
+  function getActivityStorageKey() {
+    return STORAGE_KEYS.activityPrefix + state.projectId;
+  }
+
+  function loadActivity() {
+    try {
+      const value = JSON.parse(
+        storageGet(getActivityStorageKey()) || "[]"
+      );
+
+      state.activity = Array.isArray(value)
+        ? value.slice(0, CONFIG.activityLimit)
+        : [];
+
+    } catch {
+      state.activity = [];
+    }
+  }
+
+  function saveActivity() {
+    if (!state.projectId) return;
+
+    storageSet(
+      getActivityStorageKey(),
+      JSON.stringify(
+        state.activity.slice(0, CONFIG.activityLimit)
+      )
+    );
+  }
+
+  function addActivity(title, description, icon = "•", time = new Date().toISOString()) {
+    state.activity.unshift({
+      title,
+      description,
+      icon,
+      timestamp: time
+    });
+
+    state.activity =
+      state.activity.slice(0, CONFIG.activityLimit);
+
+    saveActivity();
+
+    renderActivity();
+  }
+
+  function renderActivity() {
+    if (!els.activityTimeline) return;
+
+    els.activityTimeline.replaceChildren();
+
+    if (!state.activity.length) {
+      els.activityTimeline.append(
+        makeElement(
+          "li",
+          "activity-empty",
+          "No activity yet. Analyse your master prompt, generate code or run a security assessment."
+        )
+      );
+
+      return;
+    }
+
+    state.activity.forEach((item) => {
+      const row = makeElement(
+        "li",
+        "activity-item"
+      );
+
+      const marker = makeElement(
+        "span",
+        "activity-marker",
+        item.icon || "•"
+      );
+
+      const copy = makeElement(
+        "div",
+        "activity-copy"
+      );
+
+      copy.append(
+        makeElement("strong", "", item.title),
+        makeElement("p", "", item.description)
+      );
+
+      const time = makeElement(
+        "time",
+        "",
+        formatDate(item.timestamp)
+      );
+
+      row.append(marker, copy, time);
+
+      els.activityTimeline.append(row);
+    });
+  }
+
+  // =========================================================================
+  // 13. NAVIGATION
+  // =========================================================================
+
+  const VIEWS = [
+    "build",
+    "files",
+    "security",
+    "reports"
+  ];
+
+  function setActiveView(view) {
+    if (!VIEWS.includes(view)) return;
 
     state.activeView = view;
 
@@ -1415,9 +1687,7 @@
         active
       );
 
-      if (
-        button.classList.contains("workspace-tab")
-      ) {
+      if (button.classList.contains("workspace-tab")) {
         button.setAttribute(
           "aria-selected",
           String(active)
@@ -1426,14 +1696,9 @@
         button.tabIndex = active ? 0 : -1;
       }
 
-      if (
-        button.classList.contains("nav-item")
-      ) {
+      if (button.classList.contains("nav-item")) {
         if (active) {
-          button.setAttribute(
-            "aria-current",
-            "page"
-          );
+          button.setAttribute("aria-current", "page");
         } else {
           button.removeAttribute("aria-current");
         }
@@ -1465,12 +1730,7 @@
     document.querySelectorAll(".workspace-tab[role='tab']").forEach((tab) => {
       tab.addEventListener("keydown", (event) => {
         if (
-          ![
-            "ArrowLeft",
-            "ArrowRight",
-            "Home",
-            "End"
-          ].includes(event.key)
+          !["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)
         ) {
           return;
         }
@@ -1479,491 +1739,625 @@
           ...document.querySelectorAll(".workspace-tab[role='tab']")
         ];
 
-        const currentIndex = tabs.indexOf(tab);
+        const current = tabs.indexOf(tab);
 
-        let nextIndex = currentIndex;
+        let next = current;
 
         if (event.key === "ArrowRight") {
-          nextIndex =
-            (currentIndex + 1) % tabs.length;
+          next = (current + 1) % tabs.length;
         }
 
         if (event.key === "ArrowLeft") {
-          nextIndex =
-            (currentIndex - 1 + tabs.length) % tabs.length;
+          next = (current - 1 + tabs.length) % tabs.length;
         }
 
-        if (event.key === "Home") {
-          nextIndex = 0;
-        }
-
-        if (event.key === "End") {
-          nextIndex = tabs.length - 1;
-        }
+        if (event.key === "Home") next = 0;
+        if (event.key === "End") next = tabs.length - 1;
 
         event.preventDefault();
 
-        tabs[nextIndex].focus();
+        tabs[next].focus();
 
-        setActiveView(
-          tabs[nextIndex].dataset.view
-        );
+        setActiveView(tabs[next].dataset.view);
       });
     });
 
-    $("openSecurityBtn").addEventListener("click", () => {
+    $("openSecurityBtn")?.addEventListener("click", () => {
       setActiveView("security");
     });
   }
 
-  // ============================================================
-  // FILE EXPLORER
-  // ============================================================
+  // =========================================================================
+  // 14. MASTER PROMPT INPUT
+  // =========================================================================
 
-  function fileIconText(path) {
-    const ext = String(path)
-      .split(".")
-      .pop()
-      .toLowerCase();
+  function updateAnalyzeButton() {
+    if (!els.analyzeButton) return;
 
-    const marks = {
-      py: "Py",
-      html: "<>",
-      css: "#",
-      js: "JS",
-      ts: "TS",
-      json: "{}",
-      sql: "DB",
-      md: "M",
-      env: "•"
-    };
+    const validPrompt =
+      els.masterPrompt.value.trim().length >=
+      CONFIG.minMasterPromptLength;
 
-    return marks[ext] || "·";
+    const consent =
+      Boolean(els.masterPromptConsent.checked);
+
+    els.analyzeButton.disabled =
+      !validPrompt ||
+      !consent ||
+      state.busy;
   }
 
-  function renderFileNode(node, container, depth = 0) {
-    if (node.type === "folder") {
-      const wrapper = makeElement(
-        "div",
-        "tree-node"
+  function updateMasterPromptCounter() {
+    const length = els.masterPrompt.value.length;
+
+    setText(
+      els.masterPromptCount,
+      `${length.toLocaleString()} / ${CONFIG.maxMasterPromptLength.toLocaleString()}`
+    );
+
+    updateAnalyzeButton();
+  }
+
+  // =========================================================================
+  // 15. PROJECT ANALYSIS
+  // =========================================================================
+
+  async function analyzeMasterPrompt() {
+    if (state.busy) return;
+
+    const masterPrompt =
+      els.masterPrompt.value.trim();
+
+    if (masterPrompt.length < CONFIG.minMasterPromptLength) {
+      setError(
+        els.emptyError,
+        "Paste the complete master prompt. A short project name or summary is not sufficient."
       );
-
-      const button = makeElement(
-        "button",
-        "tree-folder"
-      );
-
-      button.type = "button";
-
-      button.style.paddingLeft =
-        `${7 + depth * 8}px`;
-
-      button.setAttribute(
-        "aria-expanded",
-        "true"
-      );
-
-      const caret = makeElement(
-        "span",
-        "folder-caret",
-        "⌄"
-      );
-
-      const icon = makeElement(
-        "span",
-        "file-type-mark",
-        "▰"
-      );
-
-      const label = makeElement(
-        "span",
-        "tree-folder-label",
-        node.name
-      );
-
-      button.append(caret, icon, label);
-
-      const childContainer = makeElement(
-        "div",
-        "tree-indent"
-      );
-
-      node.children.forEach((child) => {
-        renderFileNode(
-          child,
-          childContainer,
-          depth + 1
-        );
-      });
-
-      button.addEventListener("click", () => {
-        const expanded =
-          button.getAttribute("aria-expanded") !== "false";
-
-        button.setAttribute(
-          "aria-expanded",
-          String(!expanded)
-        );
-
-        childContainer.hidden = expanded;
-      });
-
-      wrapper.append(
-        button,
-        childContainer
-      );
-
-      container.append(wrapper);
 
       return;
     }
 
-    const button = makeElement(
-      "button",
-      "tree-file"
-    );
-
-    button.type = "button";
-
-    button.dataset.path = node.path;
-
-    button.style.paddingLeft =
-      `${7 + depth * 8}px`;
-
-    const mark = makeElement(
-      "span",
-      "file-type-mark",
-      fileIconText(node.name)
-    );
-
-    const label = makeElement(
-      "span",
-      "tree-folder-label",
-      node.name
-    );
-
-    button.append(mark, label);
-
-    button.addEventListener("click", () => {
-      selectFile(node.path);
-    });
-
-    container.append(button);
-  }
-
-  function renderFileTree(filter = "") {
-    els.fileTree.replaceChildren();
-
-    if (!state.tree?.root) {
-      els.fileTree.append(
-        makeElement(
-          "p",
-          "muted-empty",
-          "No project structure is available."
-        )
+    if (masterPrompt.length > CONFIG.maxMasterPromptLength) {
+      setError(
+        els.emptyError,
+        "Your master prompt exceeds the 50,000-character limit."
       );
-
-      els.fileTreeCount.textContent = "0 ITEMS";
 
       return;
     }
 
-    const query = filter.trim().toLowerCase();
+    if (!els.masterPromptConsent.checked) {
+      setError(
+        els.emptyError,
+        "Confirm the project-data disclosure before sending the prompt to Google Gemini."
+      );
 
-    let visibleFiles = 0;
-    let visibleFolders = 0;
+      return;
+    }
 
-    function filteredClone(node) {
-      if (node.type === "file") {
-        const matches =
-          !query ||
-          node.path.toLowerCase().includes(query);
+    if (!getAuthToken()) {
+      setError(
+        els.emptyError,
+        "Your Google sign-in session is missing. Sign in before creating a Phase 4 project."
+      );
 
-        if (matches) {
-          visibleFiles += 1;
-        }
+      return;
+    }
 
-        return matches ? node : null;
-      }
+    setError(els.emptyError, "");
 
-      const children = node.children
-        .map(filteredClone)
-        .filter(Boolean);
+    state.busy = true;
 
-      const matchesSelf =
-        !query ||
-        node.name.toLowerCase().includes(query) ||
-        children.length > 0;
+    els.analyzeButton.classList.add("is-loading");
 
-      if (
-        matchesSelf &&
-        node.name !== state.project.rootName
-      ) {
-        visibleFolders += 1;
-      }
+    els.analyzeButton.disabled = true;
 
-      return matchesSelf
-        ? {
-            ...node,
-            children
+    const buttonLabel =
+      els.analyzeButton.querySelector(".button-label");
+
+    if (buttonLabel) {
+      buttonLabel.textContent = "Analysing specification…";
+    }
+
+    setConnection("Analysing project", "neutral");
+
+    announce("Master prompt submitted for analysis.");
+
+    try {
+      const { data } = await apiRequest(
+        API.analyze,
+        {
+          method: "POST",
+
+          body: {
+            master_prompt: masterPrompt,
+            provider_consent: true
           }
-        : null;
-    }
-
-    const filtered = state.tree.root.children
-      .map(filteredClone)
-      .filter(Boolean);
-
-    if (!filtered.length) {
-      els.fileTree.append(
-        makeElement(
-          "p",
-          "muted-empty",
-          query
-            ? "No files match that filter."
-            : "This blueprint has no file entries."
-        )
+        }
       );
 
-    } else {
-      filtered.forEach((node) => {
-        renderFileNode(
-          node,
-          els.fileTree
-        );
-      });
-    }
-
-    els.fileTreeCount.textContent =
-      `${visibleFiles} FILES · ${visibleFolders} FOLDERS`;
-
-    updateSelectedFileStyle();
-  }
-
-  function updateSelectedFileStyle() {
-    document.querySelectorAll(".tree-file").forEach((button) => {
-      const selected =
-        button.dataset.path === state.selectedFilePath;
-
-      button.classList.toggle(
-        "is-selected",
-        selected
+      const projectId = String(
+        data?.project_id ||
+        data?.project?.project_id ||
+        data?.id ||
+        ""
       );
 
-      if (selected) {
-        button.setAttribute(
-          "aria-current",
-          "true"
+      if (!projectId) {
+        throw new Error(
+          "The analysis endpoint did not return a project_id. The backend must create and persist a Phase 4 project after analysing the master prompt."
         );
-      } else {
-        button.removeAttribute("aria-current");
       }
-    });
+
+      // A new master prompt creates a new, independent Phase 4 project.
+      state.projectId = projectId;
+
+      saveCurrentProject();
+
+      state.activeJob = null;
+
+      clearSavedJob();
+
+      stopPolling();
+
+      state.project = normalizeProject(data);
+
+      state.manifest = state.project.folders;
+
+      state.tree = buildProjectTree(
+        state.manifest,
+        state.project.rootName
+      );
+
+      loadGeneratedFiles(
+        state.project.generatedFiles
+      );
+
+      state.report = state.project.report
+        ? normalizeReport(state.project.report)
+        : null;
+
+      state.projectLoaded = true;
+
+      loadActivity();
+
+      els.manifestReviewed.checked = false;
+
+      setConnection("Project created", "online");
+
+      showWorkspace();
+
+      renderProjectSummary();
+
+      renderFileTree();
+
+      renderActivity();
+
+      if (state.files.size) {
+        selectFile(state.files.keys().next().value);
+      }
+
+      if (state.report) {
+        renderSecurityReport();
+      }
+
+      addActivity(
+        "Master prompt analysed",
+        `${state.project.name} · ${state.project.framework} · ${state.tree.fileCount} planned files.`,
+        "✦"
+      );
+
+      setAgentState(
+        "Analysis complete",
+        "success",
+        "The master prompt was analysed and a project manifest was created. Review the project files before generation."
+      );
+
+      showToast(
+        "Project analysis completed. Review the proposed manifest.",
+        "success"
+      );
+
+      setActiveView("build");
+
+      announce(
+        "Project analysis completed. Review the manifest before generating code."
+      );
+
+    } catch (error) {
+      setConnection("Analysis failed", "offline");
+
+      setError(
+        els.emptyError,
+        friendlyError(error)
+      );
+
+      announce("Master prompt analysis failed.");
+
+    } finally {
+      state.busy = false;
+
+      els.analyzeButton.classList.remove("is-loading");
+
+      if (buttonLabel) {
+        buttonLabel.textContent = "Analyse project";
+      }
+
+      updateAnalyzeButton();
+    }
   }
 
-  function selectFile(path) {
-    const safePath = escapePath(path);
+  // =========================================================================
+  // 16. PROJECT EMPTY STATE AND NEW PROJECT
+  // =========================================================================
 
-    if (!safePath) return;
+  function showEmptyState(message = "") {
+    els.empty.hidden = false;
 
-    state.selectedFilePath = safePath;
+    els.workspace.hidden = true;
 
-    const file = state.files.get(safePath);
+    setError(els.emptyError, message);
+  }
 
-    els.selectedFileName.textContent =
-      safePath.split("/").pop();
+  function showWorkspace() {
+    els.empty.hidden = true;
 
-    els.fileLanguageBadge.textContent =
-      file?.language || fileLanguage(safePath);
+    els.workspace.hidden = false;
+  }
 
-    const hasGeneratedSource =
-      Boolean(file && file.generated === true);
-
-    els.filePreviewEmpty.hidden =
-      hasGeneratedSource;
-
-    els.fileCodePreview.hidden =
-      !hasGeneratedSource;
-
-    els.fileCodeContent.textContent =
-      file?.content || "";
-
-    els.filePreviewStatus.textContent = file
-      ? (
-          file.generated
-            ? `${file.status.toUpperCase()} · ${file.content.length.toLocaleString()} CHARACTERS`
-            : "File is in blueprint; source content not generated yet"
-        )
-      : "Blueprint entry only — source content not generated yet";
-
-    els.copyFile.disabled =
-      !hasGeneratedSource;
-
-    if (!hasGeneratedSource) {
-      els.filePreviewEmpty.querySelector("strong").textContent =
-        "Source not generated yet";
-
-      els.filePreviewEmpty.querySelector("p").textContent =
-        "This path is part of the Phase 3 blueprint. Its contents will appear after the code-generation job returns the file source.";
-
-    } else {
-      els.filePreviewEmpty.querySelector("strong").textContent =
-        "Select a file to preview";
-
-      els.filePreviewEmpty.querySelector("p").textContent =
-        "Blueprint entries show the intended project structure. Source preview becomes available after code generation.";
+  function stopPolling() {
+    if (state.pollTimer) {
+      window.clearTimeout(state.pollTimer);
+      state.pollTimer = null;
     }
 
-    updateSelectedFileStyle();
+    if (state.pollController) {
+      state.pollController.abort();
+      state.pollController = null;
+    }
   }
 
-  // ============================================================
-  // ACTIVITY TIMELINE
-  // ============================================================
+  function startNewProject() {
+    if (state.activeJob) {
+      showToast(
+        "A job is still active. Cancel or finish it before starting another project.",
+        "warning"
+      );
 
-  function addActivity(
-    title,
-    description,
-    icon = "✦",
-    timestamp = new Date().toISOString()
-  ) {
-    state.activity.unshift({
-      title,
-      description,
-      icon,
-      timestamp
-    });
+      return;
+    }
 
-    state.activity =
-      state.activity.slice(0, 30);
+    stopPolling();
 
-    saveActivity();
+    clearSavedJob();
+
+    storageRemove(STORAGE_KEYS.currentProject);
+
+    state.projectId = "";
+    state.project = null;
+    state.manifest = [];
+    state.tree = null;
+
+    state.files.clear();
+
+    state.report = null;
+    state.findings = [];
+    state.coverage = [];
+    state.activity = [];
+
+    state.activeJob = null;
+
+    state.selectedFile = "";
+    state.projectLoaded = false;
+
+    els.masterPrompt.value = "";
+
+    els.masterPromptConsent.checked = false;
+
+    els.masterPromptCount.textContent =
+      "0 / 50,000";
+
+    els.manifestReviewed.checked = false;
+
+    els.developerPrompt.value = "";
+
+    els.promptCount.textContent =
+      "0 / 12,000";
+
+    setError(els.emptyError, "");
+
+    setConnection(
+      "Ready for a master prompt",
+      "neutral"
+    );
+
+    renderAgentSteps("idle", 0);
+
+    setAgentState(
+      "Idle",
+      "neutral",
+      "Paste a project master prompt to start an independent Phase 4 project."
+    );
 
     renderActivity();
+
+    renderFileTree();
+
+    syncControls();
+
+    showEmptyState();
+
+    updateAnalyzeButton();
+
+    announce("New independent project intake opened.");
   }
 
-  function renderActivity() {
-    els.timeline.replaceChildren();
+  // =========================================================================
+  // 17. LOAD EXISTING PROJECT
+  // =========================================================================
 
-    if (!state.activity.length) {
-      els.timeline.append(
-        makeElement(
-          "li",
-          "activity-empty",
-          "No activity yet. Build the project or run a security assessment to start the timeline."
-        )
+  function getRequestedProjectId() {
+    const params = new URLSearchParams(window.location.search);
+
+    return (
+      params.get("project_id") ||
+      params.get("projectId") ||
+      params.get("id") ||
+      storageGet(STORAGE_KEYS.currentProject) ||
+      ""
+    );
+  }
+
+  async function loadProject() {
+    if (state.busy) return;
+
+    stopPolling();
+
+    state.projectLoaded = false;
+
+    const id = state.projectId || getRequestedProjectId();
+
+    if (!id) {
+      showEmptyState();
+
+      setConnection(
+        "Ready for a master prompt",
+        "neutral"
       );
+
+      updateAnalyzeButton();
 
       return;
     }
 
-    state.activity.forEach((item) => {
-      const row = makeElement(
-        "li",
-        "activity-item"
+    state.projectId = id;
+
+    saveCurrentProject();
+
+    setConnection("Loading project", "neutral");
+
+    showEmptyState("Loading your saved Phase 4 project…");
+
+    try {
+      const { data } = await apiRequest(
+        API.project(state.projectId),
+        {
+          method: "GET"
+        }
       );
 
-      const marker = makeElement(
-        "span",
-        "activity-marker",
-        item.icon || "•"
+      state.project = normalizeProject(data);
+
+      if (!state.project.id) {
+        state.project.id = state.projectId;
+      }
+
+      state.manifest = state.project.folders;
+
+      if (!state.manifest.length) {
+        throw new Error(
+          "The saved Phase 4 project has no manifest. Re-create it using the complete master prompt."
+        );
+      }
+
+      state.tree = buildProjectTree(
+        state.manifest,
+        state.project.rootName
       );
 
-      const copy = makeElement(
-        "div",
-        "activity-copy"
+      loadGeneratedFiles(
+        state.project.generatedFiles
       );
 
-      copy.append(
-        makeElement(
-          "strong",
-          "",
-          item.title
-        ),
+      state.report = state.project.report
+        ? normalizeReport(state.project.report)
+        : null;
 
-        makeElement(
-          "p",
-          "",
-          item.description
-        )
+      state.projectLoaded = true;
+
+      loadActivity();
+
+      showWorkspace();
+
+      setConnection("Connected", "online");
+
+      renderProjectSummary();
+
+      renderFileTree();
+
+      renderActivity();
+
+      if (state.files.size) {
+        selectFile(state.files.keys().next().value);
+      }
+
+      if (state.report) {
+        renderSecurityReport();
+      }
+
+      await refreshSecurityReport(false);
+
+      if (restoreJob()) {
+        syncControls();
+
+        setAgentState(
+          "Resuming",
+          "running",
+          "An active backend job was recovered from this browser session."
+        );
+
+        pollJob();
+      } else {
+        syncControls();
+      }
+
+      announce(
+        `${state.project.name} loaded successfully.`
       );
 
-      const time = makeElement(
-        "time",
-        "",
-        formatTime(item.timestamp)
-      );
+    } catch (error) {
+      state.projectLoaded = false;
 
-      row.append(
-        marker,
-        copy,
-        time
-      );
+      setConnection("Cannot load project", "offline");
 
-      els.timeline.append(row);
-    });
+      showEmptyState(friendlyError(error));
+    }
   }
 
-  // ============================================================
-  // AGENT WORKFLOW DISPLAY
-  // ============================================================
+  // =========================================================================
+  // 18. BUILD CONTROLS
+  // =========================================================================
 
-  function renderAgentSteps(stage = "idle", progress = 0) {
-    const stages = [
-      {
-        key: "reading",
-        title: "Read project blueprint",
-        detail: "Load requirements, stack and project structure"
-      },
+  function syncControls() {
+    const active = Boolean(state.activeJob);
 
-      {
-        key: "planning",
-        title: "Plan implementation",
-        detail: "Identify files and implementation dependencies"
-      },
+    const busy = state.busy || active;
 
-      {
-        key: "generating",
-        title: "Generate source code",
-        detail: "Create and organise project files"
-      },
+    const reviewed =
+      Boolean(els.manifestReviewed?.checked);
 
-      {
-        key: "validating",
-        title: "Validate the project",
-        detail: "Check syntax, imports and project consistency"
+    if (els.buildButton) {
+      els.buildButton.disabled =
+        busy ||
+        !state.projectLoaded ||
+        !reviewed;
+
+      els.buildButton.classList.toggle(
+        "is-loading",
+        state.activeJob?.kind === "build"
+      );
+
+      const label =
+        els.buildButton.querySelector(".button-label");
+
+      if (label) {
+        label.textContent =
+          state.activeJob?.kind === "build"
+            ? "Generating…"
+            : "Generate code";
       }
-    ];
+    }
 
-    const stageIndexMap = {
+    if (els.scanButton) {
+      els.scanButton.disabled =
+        busy ||
+        !state.projectLoaded ||
+        state.files.size === 0;
+
+      els.scanButton.classList.toggle(
+        "is-loading",
+        state.activeJob?.kind === "security"
+      );
+
+      const label =
+        els.scanButton.querySelector(".button-label");
+
+      if (label) {
+        label.textContent =
+          state.activeJob?.kind === "security"
+            ? "Assessment running…"
+            : "Run security assessment";
+      }
+    }
+
+    els.cancelJob.hidden =
+      !(active && state.activeJob.kind === "build");
+
+    els.cancelSecurityJob.hidden =
+      !(active && state.activeJob.kind === "security");
+
+    els.exportProject.disabled =
+      !state.projectLoaded ||
+      state.files.size === 0;
+
+    els.downloadReport.disabled =
+      !state.report;
+  }
+
+  // =========================================================================
+  // 19. AGENT PROGRESS
+  // =========================================================================
+
+  const AGENT_STEPS = [
+    {
+      key: "reading",
+      title: "Read project specification",
+      detail: "Load requirements and approved manifest"
+    },
+    {
+      key: "planning",
+      title: "Plan implementation",
+      detail: "Select files and dependencies"
+    },
+    {
+      key: "generating",
+      title: "Generate source code",
+      detail: "Generate approved files"
+    },
+    {
+      key: "validating",
+      title: "Validate project",
+      detail: "Check syntax and project consistency"
+    }
+  ];
+
+  function agentStepIndex(stage) {
+    const map = {
       queued: 0,
+      starting: 0,
       reading: 0,
       planning: 1,
+      inspecting: 1,
       generating: 2,
       writing: 2,
       validating: 3,
       testing: 3,
       completed: 4,
-      succeeded: 4,
-      success: 4
+      failed: 4,
+      cancelled: 4
     };
 
-    const current =
-      stageIndexMap[stage] ??
-      (stage === "idle" ? -1 : 0);
+    return map[String(stage).toLowerCase()] ?? 0;
+  }
+
+  function renderAgentSteps(stage = "queued", progress = 0) {
+    if (!els.agentSteps) return;
 
     els.agentSteps.replaceChildren();
 
-    stages.forEach((item, index) => {
-      const li = makeElement(
+    const current = agentStepIndex(stage);
+
+    AGENT_STEPS.forEach((step, index) => {
+      const stateClass =
+        index < current
+          ? "is-done"
+          : index === current
+            ? "is-active"
+            : "is-idle";
+
+      const item = makeElement(
         "li",
-        `agent-step ${
-          index < current
-            ? "is-done"
-            : index === current
-              ? "is-active"
-              : "is-idle"
-        }`
+        `agent-step ${stateClass}`
       );
 
       const marker = makeElement(
@@ -1974,23 +2368,11 @@
           : `0${index + 1}`
       );
 
-      const copy = makeElement(
-        "div",
-        ""
-      );
+      const copy = makeElement("div", "");
 
       copy.append(
-        makeElement(
-          "strong",
-          "",
-          item.title
-        ),
-
-        makeElement(
-          "small",
-          "",
-          item.detail
-        )
+        makeElement("strong", "", step.title),
+        makeElement("small", "", step.detail)
       );
 
       const status = makeElement(
@@ -1999,29 +2381,27 @@
         index < current
           ? "DONE"
           : index === current
-            ? "RUNNING"
+            ? "ACTIVE"
             : "WAITING"
       );
 
-      li.append(
-        marker,
-        copy,
-        status
-      );
+      item.append(marker, copy, status);
 
-      els.agentSteps.append(li);
+      els.agentSteps.append(item);
     });
 
-    const clamped = Math.max(
-      0,
-      Math.min(100, Number(progress) || 0)
+    const percentage = Math.min(
+      100,
+      Math.max(0, Number(progress) || 0)
     );
 
     els.agentProgressFill.style.width =
-      `${clamped}%`;
+      `${percentage}%`;
 
-    els.agentProgressText.textContent =
-      `${Math.round(clamped)}%`;
+    setText(
+      els.agentProgressText,
+      `${Math.round(percentage)}%`
+    );
   }
 
   function setAgentState(
@@ -2029,305 +2409,137 @@
     mode = "neutral",
     message = ""
   ) {
-    els.agentBadge.className =
-      `state-pill ${mode}`;
+    if (els.agentBadge) {
+      const dot = makeElement(
+        "span",
+        `status-dot ${
+          mode === "running"
+            ? "warning"
+            : mode === "neutral"
+              ? "muted"
+              : ""
+        }`
+      );
 
-    const dot = makeElement(
-      "span",
-      `status-dot ${
-        mode === "running"
-          ? "warning"
-          : mode === "success"
-            ? ""
-            : "muted"
-      }`
-    );
+      els.agentBadge.className =
+        `state-pill ${mode}`;
 
-    els.agentBadge.replaceChildren(
-      dot,
-      document.createTextNode(
-        ` ${label.toUpperCase()}`
-      )
-    );
+      els.agentBadge.replaceChildren(
+        dot,
+        document.createTextNode(
+          ` ${String(label).toUpperCase()}`
+        )
+      );
+    }
 
     if (message) {
-      els.agentMessage.textContent = message;
+      setText(els.agentMessage, message);
     }
   }
 
-  function setBuildBusy(
-    busy,
-    kind = state.activeJob?.kind || "build"
-  ) {
-    const isBuild =
-      busy && kind === "build";
+  // =========================================================================
+  // 20. START CODE GENERATION
+  // =========================================================================
 
-    const isScan =
-      busy && kind === "security";
+  async function generateCode() {
+    if (
+      state.busy ||
+      state.activeJob ||
+      !state.projectLoaded
+    ) {
+      return;
+    }
 
-    els.buildButton.disabled =
-      busy ||
-      state.demo ||
-      !state.projectLoaded;
-
-    els.buildButton.classList.toggle(
-      "is-loading",
-      isBuild
-    );
-
-    els.buildButton.querySelector(".button-label").textContent =
-      isBuild
-        ? "Generating…"
-        : "Generate code";
-
-    els.scanButton.disabled =
-      busy ||
-      state.demo ||
-      !state.projectLoaded;
-
-    els.scanButton.classList.toggle(
-      "is-loading",
-      isScan
-    );
-
-    els.scanButton.querySelector(".button-label").textContent =
-      isScan
-        ? "Assessment running…"
-        : "Run security assessment";
-
-    els.cancelJob.hidden =
-      !isBuild || !state.activeJob?.id;
-
-    els.cancelSecurityJob.hidden =
-      !isScan || !state.activeJob?.id;
-
-    if (busy) {
-      setAgentState(
-        isScan ? "Scanning" : "Working",
-        "running",
-        isScan
-          ? "Security checks are running. Findings will be displayed when the backend job completes."
-          : "The agent is processing the project. Progress is reported by the backend job status."
+    if (!els.manifestReviewed.checked) {
+      showToast(
+        "Review and confirm the project manifest before generating code.",
+        "warning"
       );
 
-      renderAgentSteps("queued", 4);
+      setActiveView("files");
+
+      return;
     }
-  }
 
-  function syncJobControls() {
-    const kind =
-      state.activeJob?.kind || "";
+    const prompt =
+      els.developerPrompt.value.trim();
 
-    const busy =
-      Boolean(state.activeJob);
+    if (prompt.length < 8) {
+      setError(
+        els.buildError,
+        "Describe the implementation task. You can use the complete-project suggestion to generate the full application."
+      );
 
-    els.buildButton.disabled =
-      busy ||
-      state.demo ||
-      !state.projectLoaded;
+      els.developerPrompt.focus();
 
-    els.buildButton.classList.toggle(
-      "is-loading",
-      kind === "build"
-    );
+      return;
+    }
 
-    els.buildButton.querySelector(".button-label").textContent =
-      kind === "build"
-        ? "Generating…"
-        : "Generate code";
+    if (prompt.length > CONFIG.maxTaskPromptLength) {
+      setError(
+        els.buildError,
+        "The implementation instruction exceeds the 12,000-character limit."
+      );
 
-    els.scanButton.disabled =
-      busy ||
-      state.demo ||
-      !state.projectLoaded;
+      return;
+    }
 
-    els.scanButton.classList.toggle(
-      "is-loading",
-      kind === "security"
-    );
+    setError(els.buildError, "");
 
-    els.scanButton.querySelector(".button-label").textContent =
-      kind === "security"
-        ? "Assessment running…"
-        : "Run security assessment";
-
-    els.cancelJob.hidden =
-      !(kind === "build" && state.activeJob?.id);
-
-    els.cancelSecurityJob.hidden =
-      !(kind === "security" && state.activeJob?.id);
-  }
-
-  // ============================================================
-  // GENERATED FILE SYNCHRONISATION
-  // ============================================================
-
-  function applyGeneratedFiles(payload) {
-    const result =
-      payload?.result ||
-      payload?.output ||
-      payload?.data ||
-      payload ||
-      {};
-
-    let incoming =
-      result?.generated_files ||
-      result?.files ||
-      result?.output_files ||
-      result?.artifacts ||
-      result?.source_files ||
-      [];
-
-    const normalizedIncoming =
-      normalizeFileItems(incoming);
-
-    const mergedFiles =
-      new Map(state.files);
-
-    const structureEntries =
-      new Map();
-
-    (state.project?.folders || []).forEach((entry) => {
-      const path =
-        typeof entry === "string"
-          ? entry
-          : entry?.path || entry?.name;
-
-      if (path) {
-        structureEntries.set(
-          String(path),
-          entry
-        );
+    await startJob(
+      "build",
+      API.generate(state.projectId),
+      {
+        prompt
       }
-    });
-
-    for (const item of normalizedIncoming) {
-      if (
-        !item ||
-        typeof item !== "object"
-      ) {
-        continue;
-      }
-
-      const path = escapePath(
-        item.path ||
-        item.filename ||
-        item.name ||
-        ""
-      );
-
-      if (!path) continue;
-
-      mergedFiles.set(path, {
-        path,
-
-        content: fileContent(item),
-
-        language: text(
-          item.language,
-          fileLanguage(path)
-        ),
-
-        status: text(
-          item.status,
-          "Generated"
-        ),
-
-        generated: true
-      });
-
-      structureEntries.set(
-        path,
-        {
-          path,
-          type: "file"
-        }
-      );
-    }
-
-    state.files = mergedFiles;
-
-    const returnedStructure =
-      result?.structure?.folders ||
-      result?.structure?.files ||
-      result?.folders ||
-      result?.file_structure;
-
-    for (const entry of normalizeFileItems(returnedStructure)) {
-      const path =
-        typeof entry === "string"
-          ? escapePath(entry)
-          : escapePath(
-              entry?.path ||
-              entry?.name ||
-              ""
-            );
-
-      if (path) {
-        structureEntries.set(path, entry);
-      }
-    }
-
-    // Always include new generated paths in the explorer.
-    if (state.project) {
-      state.project.folders =
-        [...structureEntries.values()];
-
-      state.tree = buildTreeModel(
-        state.project.folders,
-        state.project.rootName
-      );
-
-      renderFileTree(els.fileSearch.value);
-
-      els.projectFileCount.textContent =
-        `${state.tree.fileCount} files`;
-
-      els.fileRootLabel.textContent =
-        state.project.rootName.toUpperCase();
-
-      els.filesCountBadge.textContent =
-        `${state.tree.fileCount} FILES IN PROJECT`;
-    }
-
-    els.exportProject.disabled =
-      state.demo ||
-      state.files.size === 0;
-
-    els.sidebarBuildStatus.textContent =
-      state.files.size
-        ? "Generated"
-        : "Completed";
-
-    if (state.files.size) {
-      const selectedStillExists =
-        state.selectedFilePath &&
-        state.files.has(state.selectedFilePath);
-
-      selectFile(
-        selectedStillExists
-          ? state.selectedFilePath
-          : state.files.keys().next().value
-      );
-    }
+    );
   }
 
-  // ============================================================
-  // BACKGROUND JOB MANAGEMENT
-  // ============================================================
+  // =========================================================================
+  // 21. START SECURITY SCAN
+  // =========================================================================
 
-  function clearJobPolling() {
-    if (state.pollTimer) {
-      window.clearTimeout(state.pollTimer);
+  async function runSecurityScan() {
+    if (
+      state.busy ||
+      state.activeJob ||
+      !state.projectLoaded
+    ) {
+      return;
     }
 
-    state.pollTimer = null;
+    if (!state.files.size) {
+      showToast(
+        "Generate project source files before running a security assessment.",
+        "warning"
+      );
 
-    if (state.jobController) {
-      state.jobController.abort();
+      setActiveView("files");
+
+      return;
     }
 
-    state.jobController = null;
+    await startJob(
+      "security",
+      API.securityScan(state.projectId),
+      {
+        scope: "project",
+        profile: "baseline"
+      }
+    );
+  }
+
+  // =========================================================================
+  // 22. BACKGROUND JOB MANAGEMENT
+  // =========================================================================
+
+  function unwrapResult(data) {
+    return (
+      data?.result ??
+      data?.output ??
+      data?.data ??
+      data
+    );
   }
 
   function jobStage(data) {
@@ -2346,129 +2558,61 @@
     if (
       raw !== null &&
       raw !== undefined &&
-      raw !== "" &&
       Number.isFinite(Number(raw))
     ) {
-      return Math.max(
-        0,
-        Math.min(100, Number(raw))
+      return Math.min(
+        100,
+        Math.max(0, Number(raw))
       );
     }
 
-    const stage = jobStage(data);
-
-    const map = {
-      queued: 5,
-      pending: 5,
+    const defaults = {
+      queued: 4,
+      starting: 6,
       reading: 15,
-      planning: 30,
+      planning: 28,
       generating: 55,
-      writing: 68,
-      validating: 82,
-      testing: 90,
-      completed: 100,
-      complete: 100,
-      succeeded: 100,
-      success: 100,
-      done: 100
+      writing: 70,
+      inspecting: 35,
+      validating: 90,
+      completed: 100
     };
 
-    return map[stage] ?? 12;
+    return defaults[jobStage(data)] ?? 10;
   }
 
-  function jobIsComplete(data) {
-    const terminal = [
+  function jobStatus(data) {
+    return String(
+      data?.status ||
+      data?.state ||
+      ""
+    ).toLowerCase();
+  }
+
+  function isComplete(data) {
+    return [
       "completed",
       "complete",
-      "succeeded",
       "success",
+      "succeeded",
       "done"
-    ];
-
-    const status = String(
-      data?.status || ""
-    ).toLowerCase();
-
-    if (status) {
-      return terminal.includes(status);
-    }
-
-    return terminal.includes(
-      String(data?.stage || "").toLowerCase()
-    );
+    ].includes(jobStatus(data));
   }
 
-  function jobIsCancelled(data) {
-    const status = String(
-      data?.status || ""
-    ).toLowerCase();
-
-    if (status) {
-      return [
-        "cancelled",
-        "canceled",
-        "stopped"
-      ].includes(status);
-    }
-
+  function isCancelled(data) {
     return [
       "cancelled",
       "canceled",
       "stopped"
-    ].includes(
-      String(data?.stage || "").toLowerCase()
-    );
+    ].includes(jobStatus(data));
   }
 
-  function jobIsFailed(data) {
-    const terminal = [
+  function isFailed(data) {
+    return [
       "failed",
       "error",
       "rejected"
-    ];
-
-    const status = String(
-      data?.status || ""
-    ).toLowerCase();
-
-    if (status) {
-      return terminal.includes(status);
-    }
-
-    return terminal.includes(
-      String(data?.stage || "").toLowerCase()
-    );
-  }
-
-  function unwrapJobResult(data) {
-    return (
-      data?.result ??
-      data?.output ??
-      data?.data ??
-      data
-    );
-  }
-
-  function isImmediateResult(kind, payload) {
-    const result = unwrapJobResult(payload);
-
-    if (kind === "build") {
-      return Boolean(
-        result?.generated_files ||
-        result?.files ||
-        result?.output_files ||
-        result?.artifacts ||
-        result?.source_files
-      );
-    }
-
-    return Boolean(
-      result?.findings ||
-      result?.security_report ||
-      result?.report ||
-      result?.coverage ||
-      result?.checks
-    );
+    ].includes(jobStatus(data));
   }
 
   function isPermanentPollError(error) {
@@ -2482,38 +2626,27 @@
     ].includes(Number(error?.status));
   }
 
-  function nextPollDelay(error) {
-    const retryAfter = Number(
-      error?.retryAfterMs
-    );
-
+  function nextRetryDelay(error) {
     if (
-      Number.isFinite(retryAfter) &&
-      retryAfter > 0
+      Number.isFinite(Number(error?.retryAfterMs)) &&
+      Number(error.retryAfterMs) > 0
     ) {
       return Math.min(
-        retryAfter,
-        60000
+        Number(error.retryAfterMs),
+        CONFIG.maxPollRetryDelay
       );
     }
 
-    const exponent = Math.min(
-      state.pollRetryCount,
-      4
-    );
-
     return Math.min(
-      30000,
-      JOB_POLL_INTERVAL_MS * (2 ** exponent)
+      CONFIG.maxPollRetryDelay,
+      CONFIG.pollInterval * (2 ** Math.min(state.retryCount, 4))
     );
   }
 
-  function scheduleJobPoll(
-    delay = JOB_POLL_INTERVAL_MS
-  ) {
+  function schedulePoll(delay = CONFIG.pollInterval) {
     if (
       !state.activeJob ||
-      state.jobPollingPaused
+      state.pollingPaused
     ) {
       return;
     }
@@ -2528,38 +2661,27 @@
     }, delay);
   }
 
-  // ============================================================
-  // START JOB
-  // ============================================================
+  async function startJob(kind, path, body) {
+    if (state.activeJob || state.busy) return;
 
-  async function beginJob({
-    kind,
-    path,
-    body
-  }) {
-    if (state.activeJob) {
-      return;
-    }
+    state.busy = true;
 
-    clearJobPolling();
+    syncControls();
 
-    state.pollCount = 0;
-    state.pollRetryCount = 0;
-    state.jobPollingPaused = false;
+    setConnection("Working", "neutral");
 
-    setInlineError(
-      els.buildError,
-      ""
+    setAgentState(
+      "Starting",
+      "running",
+      kind === "build"
+        ? "Submitting the project implementation task."
+        : "Submitting the security assessment request."
     );
 
-    setBuildBusy(true, kind);
-
     if (kind === "build") {
-      els.sidebarBuildStatus.textContent = "Starting";
-    }
-
-    if (kind === "security") {
-      els.sidebarScanStatus.textContent = "Starting";
+      setText(els.sidebarBuildStatus, "Starting");
+    } else {
+      setText(els.sidebarScanStatus, "Starting");
     }
 
     try {
@@ -2571,30 +2693,23 @@
         }
       );
 
-      const immediate = unwrapJobResult(data);
+      const result = unwrapResult(data);
 
       const jobId =
         data?.job_id ||
         data?.jobId ||
-        data?.task_id ||
-        immediate?.job_id ||
-        immediate?.task_id;
+        result?.job_id ||
+        result?.jobId;
 
-      if (
-        !jobId &&
-        isImmediateResult(kind, data)
-      ) {
-        await finishJob(
-          kind,
-          immediate
-        );
-
+      // Support an endpoint that returns a complete result immediately.
+      if (!jobId && isImmediateResult(kind, result)) {
+        await finishJob(kind, result);
         return;
       }
 
       if (!jobId) {
         throw new Error(
-          "The Phase 4 API must return job_id for an asynchronous task, or a complete immediate result."
+          "The backend did not return a job_id or a complete result."
         );
       }
 
@@ -2604,105 +2719,101 @@
         projectId: state.projectId
       };
 
-      saveActiveJob();
+      state.pollCount = 0;
+      state.retryCount = 0;
+      state.pollingPaused = false;
 
-      syncJobControls();
+      saveCurrentJob();
+
+      setConnection("Job accepted", "online");
+
+      setAgentState(
+        "Working",
+        "running",
+        safeText(data?.message, "The Phase 4 backend accepted the task.")
+      );
 
       addActivity(
         kind === "build"
           ? "Code generation started"
           : "Security assessment started",
 
-        `Job ${jobId} was accepted by the Phase 4 backend.`,
+        `Backend job ${jobId} was accepted.`,
 
-        kind === "build"
-          ? "⌘"
-          : "◇"
+        kind === "build" ? "⌘" : "◇"
       );
 
-      els.agentMessage.textContent = text(
-        data?.message,
-        "The backend accepted the job. Waiting for progress updates…"
-      );
+      syncControls();
 
       pollJob();
 
     } catch (error) {
       state.activeJob = null;
 
-      clearSavedActiveJob();
+      clearSavedJob();
 
-      setBuildBusy(false, kind);
-
-      syncJobControls();
+      setConnection("Request failed", "offline");
 
       setAgentState(
-        "Error",
+        "Failed",
         "neutral",
-        friendlyApiError(error)
+        friendlyError(error)
       );
 
       if (kind === "build") {
-        els.sidebarBuildStatus.textContent = "Failed";
-
-        setInlineError(
-          els.buildError,
-          friendlyApiError(error)
-        );
-
+        setText(els.sidebarBuildStatus, "Failed");
+        setError(els.buildError, friendlyError(error));
       } else {
-        els.sidebarScanStatus.textContent = "Failed";
-
-        showToast(
-          friendlyApiError(error),
-          "error"
-        );
+        setText(els.sidebarScanStatus, "Failed");
+        showToast(friendlyError(error), "error");
       }
 
-      addActivity(
-        kind === "build"
-          ? "Code generation could not start"
-          : "Security assessment could not start",
+      syncControls();
 
-        friendlyApiError(error),
-
-        "!"
-      );
+    } finally {
+      state.busy = false;
+      syncControls();
     }
   }
 
-  // ============================================================
-  // POLL JOB
-  // ============================================================
-
-  async function pollJob() {
-    if (
-      !state.activeJob ||
-      state.jobPollingPaused
-    ) {
-      return;
+  function isImmediateResult(kind, result) {
+    if (kind === "build") {
+      return Boolean(
+        result?.generated_files ||
+        result?.files ||
+        result?.output_files ||
+        result?.artifacts
+      );
     }
 
-    if (
-      state.pollCount >= JOB_MAX_POLLS
-    ) {
-      state.jobPollingPaused = true;
+    return Boolean(
+      result?.security_report ||
+      result?.report ||
+      result?.findings ||
+      result?.coverage
+    );
+  }
 
-      syncJobControls();
+  async function pollJob() {
+    if (!state.activeJob || state.pollingPaused) return;
+
+    if (state.pollCount >= CONFIG.maxPollAttempts) {
+      state.pollingPaused = true;
 
       setAgentState(
-        "Waiting paused",
+        "Polling paused",
         "neutral",
-        "The browser paused status checks after six minutes. The server job may still be running. Use Reload project to resume checking; do not start a duplicate job."
+        "Status checks paused after six minutes. The server job may still be running. Reload project to resume."
       );
 
-      els.agentMessage.textContent =
-        "Job retained. Status polling is paused; the active job ID is saved for recovery.";
+      setConnection("Waiting for job", "neutral");
 
       showToast(
-        "Status polling paused. The active job was retained.",
+        "Status polling paused; the active job ID was retained.",
         "info"
       );
+
+      syncControls();
 
       return;
     }
@@ -2715,7 +2826,7 @@
 
     const controller = new AbortController();
 
-    state.jobController = controller;
+    state.pollController = controller;
 
     try {
       const { data } = await apiRequest(
@@ -2733,145 +2844,107 @@
         return;
       }
 
-      state.pollRetryCount = 0;
-
-      const progress = jobProgress(data);
+      state.retryCount = 0;
 
       const stage = jobStage(data);
+      const progress = jobProgress(data);
 
-      renderAgentSteps(
-        stage,
-        progress
+      renderAgentSteps(stage, progress);
+
+      setText(
+        els.agentMessage,
+        safeText(data?.message, `Job status: ${jobStatus(data)}.`)
       );
 
-      els.agentMessage.textContent = text(
-        data?.message || data?.detail,
-        `Job status: ${text(data?.status, stage)}.`
-      );
-
-      setAgentState(
-        text(data?.status, stage),
-        "running"
-      );
-
-      if (jobIsComplete(data)) {
-        const result = unwrapJobResult(data);
+      if (isComplete(data)) {
+        const result = unwrapResult(data);
 
         state.activeJob = null;
 
-        clearSavedActiveJob();
+        clearSavedJob();
 
-        clearJobPolling();
+        stopPolling();
 
-        await finishJob(
-          job.kind,
-          result
-        );
+        await finishJob(job.kind, result);
 
         return;
       }
 
-      if (jobIsCancelled(data)) {
+      if (isCancelled(data)) {
         state.activeJob = null;
 
-        clearSavedActiveJob();
+        clearSavedJob();
 
-        clearJobPolling();
-
-        setBuildBusy(false, job.kind);
-
-        syncJobControls();
+        stopPolling();
 
         setAgentState(
           "Cancelled",
           "neutral",
-          "The backend reports that this job was cancelled."
+          "The backend confirmed that the task was cancelled."
         );
 
-        els.agentMessage.textContent =
-          "The backend confirmed that this job was cancelled.";
+        setConnection("Ready", "online");
 
         if (job.kind === "build") {
-          els.sidebarBuildStatus.textContent = "Cancelled";
-        }
-
-        if (job.kind === "security") {
-          els.sidebarScanStatus.textContent = "Cancelled";
+          setText(els.sidebarBuildStatus, "Cancelled");
+        } else {
+          setText(els.sidebarScanStatus, "Cancelled");
         }
 
         addActivity(
           "Job cancelled",
-          `The backend reports that job ${job.id} was cancelled.`,
+          `Job ${job.id} was cancelled.`,
           "Ⅱ"
         );
 
-        showToast(
-          "The backend confirmed cancellation.",
-          "info"
-        );
+        syncControls();
 
         return;
       }
 
-      if (jobIsFailed(data)) {
+      if (isFailed(data)) {
         state.activeJob = null;
 
-        clearSavedActiveJob();
+        clearSavedJob();
 
-        clearJobPolling();
+        stopPolling();
 
-        setBuildBusy(false, job.kind);
-
-        syncJobControls();
-
-        const failure = text(
+        const message = safeText(
           data?.error || data?.message,
-          "The backend job did not complete."
+          "The backend job failed."
         );
 
         setAgentState(
           "Failed",
           "neutral",
-          failure
+          message
         );
 
+        setConnection("Job failed", "offline");
+
         if (job.kind === "build") {
-          els.sidebarBuildStatus.textContent = "Failed";
-
-          setInlineError(
-            els.buildError,
-            failure
-          );
-
+          setText(els.sidebarBuildStatus, "Failed");
+          setError(els.buildError, message);
         } else {
-          els.sidebarScanStatus.textContent = "Failed";
-
-          showToast(
-            failure,
-            "error"
-          );
+          setText(els.sidebarScanStatus, "Failed");
+          showToast(message, "error");
         }
 
         addActivity(
-          job.kind === "build"
-            ? "Code generation failed"
-            : "Security assessment failed",
-
-          failure,
+          "Job failed",
+          message,
           "!"
         );
 
+        syncControls();
+
         return;
       }
 
-      scheduleJobPoll(
-        JOB_POLL_INTERVAL_MS
-      );
+      schedulePoll(CONFIG.pollInterval);
 
     } catch (error) {
-      if (error.name === "AbortError") {
-        return;
-      }
+      if (error.name === "AbortError") return;
 
       if (
         !state.activeJob ||
@@ -2880,144 +2953,287 @@
         return;
       }
 
-      state.jobController = null;
-
       if (isPermanentPollError(error)) {
-        state.jobPollingPaused = true;
+        state.pollingPaused = true;
 
         setAgentState(
           "Status check blocked",
           "neutral",
-          friendlyApiError(error)
+          friendlyError(error)
         );
 
-        els.agentMessage.textContent =
-          `${friendlyApiError(error)} The job ID remains saved; use Reload project after correcting access or backend routing.`;
+        setConnection("Job status unavailable", "offline");
 
-        showToast(
-          friendlyApiError(error),
-          "error"
-        );
-
-        syncJobControls();
+        syncControls();
 
         return;
       }
 
-      state.pollRetryCount += 1;
+      state.retryCount += 1;
 
-      const delay = nextPollDelay(error);
+      schedulePoll(nextRetryDelay(error));
 
-      els.agentMessage.textContent =
-        `Temporary status-check error. Retrying in ${Math.round(delay / 1000)}s: ${friendlyApiError(error)}`;
-
-      scheduleJobPoll(delay);
+      setText(
+        els.agentMessage,
+        `Temporary status-check error. Retrying: ${friendlyError(error)}`
+      );
 
     } finally {
-      if (state.jobController === controller) {
-        state.jobController = null;
+      if (state.pollController === controller) {
+        state.pollController = null;
       }
     }
   }
 
-  // ============================================================
-  // JOB COMPLETION
-  // ============================================================
+  // =========================================================================
+  // 23. JOB RECOVERY
+  // =========================================================================
 
-  async function finishJob(kind, result) {
-    setBuildBusy(false, kind);
+  function restoreJob() {
+    try {
+      const saved = JSON.parse(
+        storageGet(STORAGE_KEYS.activeJob) || "null"
+      );
 
-    syncJobControls();
+      if (
+        !saved?.id ||
+        saved.projectId !== state.projectId ||
+        !["build", "security"].includes(saved.kind)
+      ) {
+        return false;
+      }
 
-    renderAgentSteps(
-      "completed",
-      100
+      state.activeJob = {
+        id: String(saved.id),
+        kind: saved.kind,
+        projectId: state.projectId
+      };
+
+      state.pollCount = 0;
+      state.retryCount = 0;
+      state.pollingPaused = false;
+
+      return true;
+
+    } catch {
+      clearSavedJob();
+      return false;
+    }
+  }
+
+  // =========================================================================
+  // 24. CANCEL JOB
+  // =========================================================================
+
+  async function cancelCurrentJob() {
+    if (!state.activeJob) return;
+
+    const job = { ...state.activeJob };
+
+    els.cancelJob.disabled = true;
+    els.cancelSecurityJob.disabled = true;
+
+    setText(
+      els.agentMessage,
+      "Sending cancellation request to the backend…"
     );
 
+    try {
+      const { data } = await apiRequest(
+        API.cancelJob(job.id),
+        {
+          method: "POST",
+          body: {}
+        }
+      );
+
+      const status = String(data?.status || "").toLowerCase();
+
+      const confirmed =
+        data?.cancelled === true ||
+        data?.canceled === true ||
+        [
+          "cancelled",
+          "canceled",
+          "stopped"
+        ].includes(status);
+
+      const accepted =
+        data?.cancel_requested === true;
+
+      if (confirmed) {
+        state.activeJob = null;
+
+        clearSavedJob();
+
+        stopPolling();
+
+        setAgentState(
+          "Cancelled",
+          "neutral",
+          "The backend confirmed that this job was cancelled."
+        );
+
+        addActivity(
+          "Job cancelled",
+          `Job ${job.id} was cancelled.`,
+          "Ⅱ"
+        );
+
+        showToast(
+          "Job cancellation confirmed.",
+          "success"
+        );
+
+        syncControls();
+
+        return;
+      }
+
+      if (accepted) {
+        /*
+         * HTTP 202 means the cancellation request was accepted.
+         * It does NOT prove that a Gemini call or scanner stopped.
+         * Keep the job active and continue checking its status.
+         */
+
+        state.pollingPaused = false;
+
+        setText(
+          els.agentMessage,
+          "Cancellation accepted. Waiting for the worker to reach its next safe checkpoint."
+        );
+
+        showToast(
+          "Cancellation request accepted. Waiting for confirmation.",
+          "info"
+        );
+
+        schedulePoll(CONFIG.pollInterval);
+
+        return;
+      }
+
+      if (data?.status === "completed" || data?.status === "failed") {
+        state.pollingPaused = false;
+        schedulePoll(500);
+
+        return;
+      }
+
+      throw new Error(
+        "The backend did not confirm cancellation or accept a cancellation request."
+      );
+
+    } catch (error) {
+      setText(
+        els.agentMessage,
+        `Cancellation not confirmed: ${friendlyError(error)}`
+      );
+
+      showToast(
+        friendlyError(error),
+        "error"
+      );
+
+      state.pollingPaused = false;
+
+      schedulePoll(CONFIG.pollInterval);
+
+    } finally {
+      els.cancelJob.disabled = false;
+      els.cancelSecurityJob.disabled = false;
+      syncControls();
+    }
+  }
+
+  // =========================================================================
+  // 25. PROCESS COMPLETED JOB
+  // =========================================================================
+
+  async function finishJob(kind, result) {
     if (kind === "build") {
-      applyGeneratedFiles(result);
+      const files =
+        result?.generated_files ||
+        result?.files ||
+        result?.output_files ||
+        result?.artifacts ||
+        [];
+
+      if (files.length) {
+        addGeneratedFiles(files);
+      }
+
+      const validation =
+        result?.build_validation ||
+        result?.validation ||
+        null;
+
+      setText(els.sidebarBuildStatus, "Completed");
 
       setAgentState(
-        "Completed",
+        "Build complete",
         "success",
-        "Code generation completed. Review generated files and run validation before deploying."
+        result?.message ||
+        "Code generation completed. Review the generated source and validation results."
       );
 
-      els.sidebarBuildStatus.textContent =
-        state.files.size
-          ? "Generated"
-          : "Completed";
+      renderAgentSteps("completed", 100);
 
-      els.projectStateText.textContent =
-        "Code generated";
+      if (validation) {
+        const validationMessage =
+          `${validation.status || "Validation finished"} · ` +
+          `${(validation.errors || []).length} errors · ` +
+          `${(validation.skipped || []).length} skipped checks.`;
 
-      els.projectStateDot.className =
-        "status-dot";
-
-      setInlineError(
-        els.buildError,
-        ""
-      );
+        setText(
+          els.agentMessage,
+          `${safeText(result?.message, "Generation completed.")} ${validationMessage}`
+        );
+      }
 
       addActivity(
         "Code generation completed",
-        `${state.files.size} source files are available for review.`,
+        `${state.files.size} generated project files are available for review.`,
         "⌘"
       );
 
       showToast(
-        "Code generation completed. Review the generated files.",
+        "Code generation completed. Review your files.",
         "success"
       );
 
-      els.exportProject.disabled =
-        state.demo ||
-        state.files.size === 0;
-
       setActiveView("files");
+
+      syncControls();
 
       return;
     }
 
-    const reportCandidate =
+    const candidate =
       result?.security_report ||
       result?.report ||
       result;
 
-    state.report = normalizeReport(
-      reportCandidate
-    );
+    state.report = normalizeReport(candidate);
 
     renderSecurityReport();
 
+    setText(els.sidebarScanStatus, "Completed");
+
     setAgentState(
-      "Scan complete",
+      "Assessment complete",
       "success",
-      "The assessment completed. Review findings and checks that remain untested."
+      "Security assessment completed. Review findings and coverage gaps before deployment."
     );
 
-    els.sidebarScanStatus.textContent =
-      "Completed";
-
-    els.assessmentStatus.textContent =
-      "Assessment complete";
-
-    els.assessmentSubtext.textContent =
-      "Review findings and coverage before deployment.";
-
-    els.assessmentIcon.classList.remove(
-      "is-warning"
-    );
-
-    els.assessmentIcon.classList.add(
-      "is-success"
-    );
+    renderAgentSteps("completed", 100);
 
     addActivity(
       "Security assessment completed",
-      `${state.findings.length} findings were returned by the backend.`,
+      `${state.findings.length} findings returned by the backend.`,
       "◇",
-      state.report.generatedAt || new Date().toISOString()
+      state.report.generatedAt
     );
 
     showToast(
@@ -3026,174 +3242,101 @@
     );
 
     setActiveView("security");
+
+    syncControls();
   }
 
-  // ============================================================
-  // JOB CANCELLATION
-  // ============================================================
+  // =========================================================================
+  // 26. SECURITY REPORT NORMALISATION
+  // =========================================================================
 
-  async function cancelCurrentJob() {
-    if (!state.activeJob) return;
-
-    const job = {
-      ...state.activeJob
-    };
-
-    const cancelButtons = [
-      els.cancelJob,
-      els.cancelSecurityJob
-    ];
-
-    cancelButtons.forEach((button) => {
-      button.disabled = true;
-    });
-
-    els.agentMessage.textContent =
-      "Sending cancellation request to the backend…";
-
-    try {
-      const { data } = await apiRequest(
-        API.cancelJob(job.id),
-        {
-          method: "POST",
-          body: {
-            project_id: state.projectId
-          }
-        }
-      );
-
-      const acknowledged =
-        data?.cancelled === true ||
-        data?.canceled === true ||
-        [
-          "cancelled",
-          "canceled",
-          "stopped"
-        ].includes(
-          String(data?.status || "").toLowerCase()
-        );
-
-      if (!acknowledged) {
-        throw new Error(
-          "The backend did not confirm that the job was cancelled. The job remains active."
-        );
-      }
-
-      state.activeJob = null;
-
-      state.jobPollingPaused = false;
-
-      clearSavedActiveJob();
-
-      clearJobPolling();
-
-      setBuildBusy(false, job.kind);
-
-      syncJobControls();
-
-      setAgentState(
-        "Cancelled",
-        "neutral",
-        "The backend confirmed that the job was cancelled."
-      );
-
-      els.agentMessage.textContent =
-        "The backend confirmed cancellation.";
-
-      if (job.kind === "build") {
-        els.sidebarBuildStatus.textContent = "Cancelled";
-      }
-
-      if (job.kind === "security") {
-        els.sidebarScanStatus.textContent = "Cancelled";
-      }
-
-      addActivity(
-        "Job cancelled",
-        `The backend confirmed cancellation of job ${job.id}.`,
-        "Ⅱ"
-      );
-
-      showToast(
-        "The backend confirmed cancellation.",
-        "success"
-      );
-
-    } catch (error) {
-      els.agentMessage.textContent =
-        `${friendlyApiError(error)} The active job was retained; status polling will continue.`;
-
-      showToast(
-        `Cancellation was not confirmed: ${friendlyApiError(error)}`,
-        "error"
-      );
-
-      state.jobPollingPaused = false;
-
-      scheduleJobPoll(
-        JOB_POLL_INTERVAL_MS
-      );
-
-    } finally {
-      cancelButtons.forEach((button) => {
-        button.disabled = false;
-      });
-    }
-  }
-
-  // ============================================================
-  // SECURITY REPORT NORMALISATION
-  // ============================================================
-
-  function normalizeReport(report) {
-    const findings =
-      Array.isArray(report?.findings)
-        ? report.findings
-        : Array.isArray(report?.issues)
-          ? report.issues
-          : [];
-
-    const coverageRaw =
-      report?.coverage ||
-      report?.checks ||
-      report?.coverage_summary ||
-      [];
-
-    const coverage =
-      Array.isArray(coverageRaw)
-        ? coverageRaw
-        : Object.entries(coverageRaw).map(
-            ([category, value]) =>
-              typeof value === "object"
-                ? {
-                    category,
-                    ...value
-                  }
-                : {
-                    category,
-                    status: value
-                  }
-          );
+  function normalizeReport(raw) {
+    const report =
+      raw && typeof raw === "object"
+        ? raw
+        : {};
 
     return {
-      status: text(
-        report?.status,
+      status: safeText(
+        report.status,
         "completed"
       ),
 
       generatedAt:
-        report?.generated_at ||
-        report?.created_at ||
-        report?.timestamp ||
+        report.generated_at ||
+        report.created_at ||
+        report.timestamp ||
         null,
 
-      findings,
-      coverage,
+      sourceHash:
+        report.source_hash ||
+        null,
+
+      findings:
+        Array.isArray(report.findings)
+          ? report.findings
+          : Array.isArray(report.issues)
+            ? report.issues
+            : [],
+
+      coverage: normalizeCoverage(
+        report.coverage ||
+        report.checks ||
+        report.coverage_summary ||
+        []
+      ),
+
+      summary:
+        report.summary &&
+        typeof report.summary === "object"
+          ? report.summary
+          : {},
+
+      tools:
+        Array.isArray(report.tools)
+          ? report.tools
+          : [],
+
+      platformChecks:
+        Array.isArray(report.platform_checks)
+          ? report.platform_checks
+          : [],
+
+      limitations:
+        Array.isArray(report.limitations)
+          ? report.limitations
+          : [],
+
       raw: report
     };
   }
 
-  function severityClass(value) {
+  function normalizeCoverage(value) {
+    if (Array.isArray(value)) return value;
+
+    if (value && typeof value === "object") {
+      return Object.entries(value).map(
+        ([key, item]) => {
+          if (item && typeof item === "object") {
+            return {
+              id: key,
+              ...item
+            };
+          }
+
+          return {
+            id: key,
+            category: key,
+            status: item
+          };
+        }
+      );
+    }
+
+    return [];
+  }
+
+  function normalizeSeverity(value) {
     const severity = String(
       value || "informational"
     ).toLowerCase();
@@ -3210,12 +3353,10 @@
   }
 
   function normalizeCoverageStatus(value) {
-    const raw = String(
-      value || "not tested"
-    )
-      .toLowerCase()
+    const raw = String(value || "not_tested")
       .trim()
-      .replace(/[ _]+/g, "-");
+      .toLowerCase()
+      .replace(/[ -]+/g, "_");
 
     const aliases = {
       pass: "passed",
@@ -3225,89 +3366,86 @@
       fail: "failed",
       failure: "failed",
 
-      "not-run": "not-tested",
-      notchecked: "not-tested",
-      "not-checked": "not-tested",
+      finding: "findings",
+      potential: "findings",
+
+      not_run: "not-tested",
+      not_checked: "not-tested",
+      not_tested: "not-tested",
+
+      not_applicable: "not-applicable",
+
+      tool_error: "tool-error",
+      error: "tool-error",
 
       skipped: "skipped",
-      unsupported: "unsupported",
-      error: "error"
+      unsupported: "unsupported"
     };
 
-    const mapped =
-      aliases[raw] || raw;
+    const result = aliases[raw] || raw.replace(/_/g, "-");
 
-    return [
+    const valid = [
       "passed",
       "failed",
+      "findings",
       "not-tested",
-      "unsupported",
+      "not-applicable",
+      "tool-error",
       "skipped",
-      "error"
-    ].includes(mapped)
-      ? mapped
+      "unsupported"
+    ];
+
+    return valid.includes(result)
+      ? result
       : "unknown";
   }
 
-  function countNotTested(coverage) {
-    return coverage.filter((item) =>
-      normalizeCoverageStatus(
-        item.status || item.result
-      ) === "not-tested"
-    ).length;
-  }
-
-  // ============================================================
-  // RENDER SECURITY REPORT
-  // ============================================================
+  // =========================================================================
+  // 27. RENDER SECURITY REPORT
+  // =========================================================================
 
   function renderSecurityReport() {
     const report = state.report;
 
     if (!report) return;
 
-    state.findings = report.findings
-
-      .filter(
-        (finding) =>
-          finding &&
-          typeof finding === "object"
-      )
-
-      .map((finding, index) => ({
-        id: text(
+    state.findings = report.findings.map(
+      (finding, index) => ({
+        id: safeText(
           finding.id ||
           finding.finding_id,
-
           `finding-${index + 1}`
         ),
 
-        title: text(
+        checkId: safeText(
+          finding.check_id,
+          ""
+        ),
+
+        title: safeText(
           finding.title ||
           finding.name,
-
           "Untitled security finding"
         ),
 
-        severity: severityClass(
+        severity: normalizeSeverity(
           finding.severity
         ),
 
-        confidence: text(
+        confidence: safeText(
           finding.confidence,
           "Not provided"
         ),
 
-        status: text(
+        status: safeText(
           finding.status,
           "open"
         ).toLowerCase(),
 
-        file: text(
+        file: safeText(
           finding.file ||
           finding.path ||
           finding.affected_asset,
-
           "Location not provided"
         ),
 
@@ -3317,154 +3455,177 @@
           finding.start_line ||
           "",
 
-        description: text(
+        description: safeText(
           finding.description ||
           finding.evidence,
-
-          "The backend did not provide a description."
+          "No description was returned."
         ),
 
-        attack: text(
+        evidence: safeText(
+          finding.evidence ||
+          finding.description,
+          "No specific source evidence was returned."
+        ),
+
+        attack: safeText(
           finding.attack_scenario ||
           finding.impact,
-
           "No attack scenario was provided."
         ),
 
-        recommendation: text(
+        recommendation: safeText(
           finding.recommendation ||
           finding.remediation ||
           finding.fix,
-
-          "No remediation guidance was provided."
+          "No recommendation was provided."
         ),
 
-        cwe: text(
-          finding.cwe ||
-          finding.cwe_id,
-
+        cwe: safeText(
+          finding.cwe || finding.cwe_id,
           ""
         ),
 
-        owasp: text(
+        owasp: safeText(
           finding.owasp ||
           finding.owasp_category,
+          ""
+        ),
 
+        tool: safeText(
+          finding.tool,
           ""
         ),
 
         raw: finding
-      }));
+      })
+    );
 
     state.coverage = report.coverage;
 
-    const criticalHigh =
-      state.findings.filter(
-        (finding) =>
-          ["critical", "high"].includes(
-            finding.severity
-          )
-      ).length;
+    const criticalHigh = state.findings.filter(
+      (finding) =>
+        ["critical", "high"].includes(finding.severity)
+    ).length;
 
-    const mediumLow =
-      state.findings.filter(
-        (finding) =>
-          ["medium", "low"].includes(
-            finding.severity
-          )
-      ).length;
+    const mediumLow = state.findings.filter(
+      (finding) =>
+        ["medium", "low"].includes(finding.severity)
+    ).length;
 
-    els.criticalHigh.textContent =
-      String(criticalHigh);
+    const notTested = state.coverage.filter(
+      (item) =>
+        normalizeCoverageStatus(item.status || item.result) === "not-tested"
+    ).length;
 
-    els.mediumLow.textContent =
-      String(mediumLow);
+    setText(els.criticalHigh, criticalHigh);
+    setText(els.mediumLow, mediumLow);
+    setText(els.notTested, notTested);
 
-    els.notTested.textContent =
-      String(countNotTested(state.coverage));
+    setText(
+      els.findingsSummary,
+      `${state.findings.length} findings · ${state.coverage.length} coverage records`
+    );
 
-    els.findingsSummary.textContent =
-      `${state.findings.length} findings returned · ${state.coverage.length} coverage records received.`;
+    setText(
+      els.lastScan,
+      `Last scan: ${formatDate(report.generatedAt)}`
+    );
 
-    els.lastScan.textContent =
-      `Last scan: ${formatTime(report.generatedAt)}`;
+    const passed = state.coverage.filter(
+      (item) =>
+        normalizeCoverageStatus(item.status || item.result) === "passed"
+    ).length;
 
-    const passed =
-      state.coverage.filter(
-        (item) =>
-          normalizeCoverageStatus(
-            item.status || item.result
-          ) === "passed"
-      ).length;
+    const failed = state.coverage.filter(
+      (item) =>
+        normalizeCoverageStatus(item.status || item.result) === "failed"
+    ).length;
 
-    const failed =
-      state.coverage.filter(
-        (item) =>
-          normalizeCoverageStatus(
-            item.status || item.result
-          ) === "failed"
-      ).length;
+    const findings = state.coverage.filter(
+      (item) =>
+        normalizeCoverageStatus(item.status || item.result) === "findings"
+    ).length;
 
-    const notTested =
-      state.coverage.filter(
-        (item) =>
-          normalizeCoverageStatus(
-            item.status || item.result
-          ) === "not-tested"
-      ).length;
+    const notApplicable = state.coverage.filter(
+      (item) =>
+        normalizeCoverageStatus(item.status || item.result) === "not-applicable"
+    ).length;
 
-    const unsupported =
-      state.coverage.filter(
-        (item) =>
-          [
-            "unsupported",
-            "skipped",
-            "unknown"
-          ].includes(
-            normalizeCoverageStatus(
-              item.status || item.result
-            )
-          )
-      ).length;
+    setText(
+      els.coverageText,
+      `Passed: ${passed} · Findings: ${findings + failed} · Not tested: ${notTested} · N/A: ${notApplicable}`
+    );
 
-    els.coverageText.textContent =
-      `Coverage: ${passed} passed · ${failed} failed · ${notTested} not tested · ${unsupported} other`;
+    setText(
+      els.assessmentStatus,
+      report.status === "completed"
+        ? "Assessment complete"
+        : report.status
+    );
 
-    els.reportSummaryTitle.textContent =
-      state.findings.length
-        ? "Security report ready"
-        : "Assessment completed";
+    setText(
+      els.assessmentSubtext,
+      "Review evidence, severity and coverage before deployment."
+    );
 
-    els.reportSummaryText.textContent =
-      state.findings.length
-        ? `${state.findings.length} findings were returned. Review evidence, severity and untested areas before deployment.`
-        : "No findings were returned by the checks that ran. This is not a guarantee that the application is secure.";
+    if (els.assessmentIcon) {
+      els.assessmentIcon.classList.toggle(
+        "is-success",
+        state.findings.length === 0
+      );
 
-    els.reportDate.textContent =
-      `DATE ${formatTime(report.generatedAt)}`;
+      els.assessmentIcon.classList.toggle(
+        "is-warning",
+        state.findings.length > 0 || notTested > 0
+      );
+    }
 
-    els.reportFindings.textContent =
-      `${state.findings.length} FINDINGS`;
+    setText(
+      els.reportSummaryTitle,
+      "Security report ready"
+    );
 
-    els.downloadReport.disabled = false;
+    setText(
+      els.reportSummaryText,
+      `${state.findings.length} findings were returned. This assessment does not prove that the application is secure.`
+    );
+
+    setText(
+      els.reportDate,
+      `DATE ${formatDate(report.generatedAt)}`
+    );
+
+    setText(
+      els.reportFindings,
+      `${state.findings.length} FINDINGS`
+    );
 
     renderFindings();
 
     renderCoverage();
+
+    els.downloadReport.disabled = false;
+
+    setText(
+      els.sidebarScanStatus,
+      "Available"
+    );
   }
 
-  // ============================================================
-  // FINDINGS LIST
-  // ============================================================
+  // =========================================================================
+  // 28. FINDINGS RENDERER
+  // =========================================================================
 
   function renderFindings() {
+    if (!els.findingsList) return;
+
     els.findingsList.replaceChildren();
 
     const severity =
-      els.severityFilter.value;
+      els.severityFilter?.value || "all";
 
-    const status =
-      els.findingStatusFilter.value;
+    const requestedStatus =
+      els.findingStatusFilter?.value || "all";
 
     const filtered = state.findings.filter(
       (finding) => {
@@ -3473,13 +3634,10 @@
           finding.severity === severity;
 
         const statusMatch =
-          status === "all" ||
-          finding.status.replace(/[_-]/g, " ") === status;
+          requestedStatus === "all" ||
+          finding.status.replace(/[_-]/g, " ") === requestedStatus;
 
-        return (
-          severityMatch &&
-          statusMatch
-        );
+        return severityMatch && statusMatch;
       }
     );
 
@@ -3490,30 +3648,22 @@
       );
 
       empty.append(
-        makeElement(
-          "span",
-          "empty-shield",
-          "◇"
-        )
-      );
+        makeElement("span", "empty-shield", "◇"),
 
-      empty.append(
         makeElement(
           "strong",
           "",
           state.findings.length
             ? "No findings match these filters"
             : "No findings returned"
-        )
-      );
+        ),
 
-      empty.append(
         makeElement(
           "p",
           "",
           state.findings.length
-            ? "Change the severity or status filters to see more results."
-            : "The backend returned no findings. Confirm that the intended checks actually ran and review coverage before treating this as a clean result."
+            ? "Change the selected filters to see the remaining findings."
+            : "No findings were returned by the checks that ran. Review coverage and Not tested areas before treating the result as clean."
         )
       );
 
@@ -3553,10 +3703,8 @@
           "strong",
           "",
           finding.title
-        )
-      );
+        ),
 
-      titleLine.append(
         makeElement(
           "span",
           `severity-badge ${finding.severity}`,
@@ -3564,14 +3712,10 @@
         )
       );
 
-      copy.append(titleLine);
-
-      copy.append(
-        makeElement(
-          "p",
-          "",
-          truncate(finding.description, 210)
-        )
+      const description = makeElement(
+        "p",
+        "",
+        truncate(finding.description, 230)
       );
 
       const meta = makeElement(
@@ -3580,27 +3724,12 @@
       );
 
       meta.append(
+        makeElement("span", "", finding.id),
         makeElement(
           "span",
           "",
-          finding.id
-        )
-      );
-
-      meta.append(
-        makeElement(
-          "span",
-          "",
-          finding.file +
-            (
-              finding.line
-                ? `:${finding.line}`
-                : ""
-            )
-        )
-      );
-
-      meta.append(
+          `${finding.file}${finding.line ? `:${finding.line}` : ""}`
+        ),
         makeElement(
           "span",
           "",
@@ -3608,47 +3737,42 @@
         )
       );
 
-      copy.append(meta);
-
-      main.append(
-        marker,
-        copy
+      copy.append(
+        titleLine,
+        description,
+        meta
       );
+
+      main.append(marker, copy);
 
       const actions = makeElement(
         "div",
         "finding-actions"
       );
 
-      const detailButton = makeElement(
+      const button = makeElement(
         "button",
         "finding-action",
         "View details"
       );
 
-      detailButton.type = "button";
+      button.type = "button";
 
-      detailButton.addEventListener(
-        "click",
-        () => {
-          openFinding(finding);
-        }
-      );
+      button.addEventListener("click", () => {
+        openFinding(finding);
+      });
 
-      actions.append(detailButton);
+      actions.append(button);
 
-      row.append(
-        main,
-        actions
-      );
+      row.append(main, actions);
 
       els.findingsList.append(row);
     });
   }
 
-  // ============================================================
-  // COVERAGE LIST
-  // ============================================================
+  // =========================================================================
+  // 29. COVERAGE RENDERER
+  // =========================================================================
 
   function renderCoverage() {
     els.coverageList.replaceChildren();
@@ -3658,7 +3782,7 @@
         makeElement(
           "div",
           "coverage-placeholder",
-          "No coverage details were returned. The report should not assume unreported checks passed."
+          "No coverage details were returned. Unreported checks must not be assumed to have passed."
         )
       );
 
@@ -3670,11 +3794,11 @@
         item.status || item.result
       );
 
-      const label = text(
+      const name = safeText(
         item.category ||
+        item.check ||
         item.name ||
-        item.check,
-
+        item.id,
         "Security check"
       );
 
@@ -3683,19 +3807,33 @@
         "coverage-item"
       );
 
-      row.append(
+      const copy = makeElement(
+        "div",
+        "coverage-copy"
+      );
+
+      copy.append(
+        makeElement("strong", "", name),
+
         makeElement(
-          "span",
-          "",
-          label
+          "small",
+          "coverage-evidence",
+          safeText(
+            item.evidence || item.note,
+            "No evidence detail was returned."
+          )
         )
       );
+
+      row.append(copy);
 
       row.append(
         makeElement(
           "span",
           `coverage-status ${status}`,
-          status.replace(/-/g, " ")
+          status === "findings"
+            ? "Finding"
+            : status.replace(/-/g, " ")
         )
       );
 
@@ -3703,9 +3841,65 @@
     });
   }
 
-  // ============================================================
-  // FINDING DETAIL MODAL
-  // ============================================================
+  // =========================================================================
+  // 30. SECURITY REPORT REFRESH
+  // =========================================================================
+
+  async function refreshSecurityReport(showErrors = false) {
+    if (!state.projectId) return;
+
+    try {
+      const { data } = await apiRequest(
+        API.securityReport(state.projectId),
+        {
+          method: "GET"
+        }
+      );
+
+      const report =
+        data?.security_report ||
+        data?.report ||
+        data;
+
+      if (!report || typeof report !== "object") {
+        return;
+      }
+
+      state.report = normalizeReport(report);
+
+      renderSecurityReport();
+
+    } catch (error) {
+      // A not-yet-created report is a normal state.
+      if (error.status === 404) return;
+
+      if (error.status === 409 && error.data?.stale) {
+        setText(
+          els.assessmentStatus,
+          "Report outdated"
+        );
+
+        setText(
+          els.assessmentSubtext,
+          "Project source changed. Run a fresh assessment."
+        );
+
+        if (showErrors) {
+          showToast(error.message, "warning");
+        }
+
+        return;
+      }
+
+      if (showErrors) {
+        showToast(friendlyError(error), "error");
+      }
+    }
+  }
+
+  // =========================================================================
+  // 31. FINDING DETAIL MODAL
+  // =========================================================================
 
   function openFinding(finding) {
     state.currentFinding = finding;
@@ -3713,42 +3907,54 @@
     state.previousModalFocus =
       document.activeElement;
 
-    els.findingModalTitle.textContent =
-      finding.title;
+    setText(
+      els.findingModalTitle,
+      finding.title
+    );
 
     els.modalSeverity.className =
       `severity-badge ${finding.severity}`;
 
-    els.modalSeverity.textContent =
-      finding.severity;
+    setText(
+      els.modalSeverity,
+      finding.severity
+    );
 
-    els.modalLocation.textContent =
-      `${finding.file}${finding.line ? `:${finding.line}` : ""} · ${finding.id} · Confidence: ${finding.confidence}`;
+    setText(
+      els.modalLocation,
+      `${finding.file}${finding.line ? `:${finding.line}` : ""} · ${finding.id} · Confidence: ${finding.confidence}`
+    );
 
-    els.modalEvidence.textContent =
-      finding.description;
+    setText(
+      els.modalEvidence,
+      finding.evidence
+    );
 
-    els.modalImpact.textContent =
-      finding.attack;
+    setText(
+      els.modalImpact,
+      finding.attack
+    );
 
-    els.modalFix.textContent =
-      finding.recommendation;
+    setText(
+      els.modalFix,
+      finding.recommendation
+    );
 
     els.patchPreview.hidden = true;
 
     els.patchPreviewText.textContent = "";
 
-    els.fixMessage.textContent =
-      "The agent can prepare a proposed patch. A proposal is not applied automatically.";
+    setText(
+      els.fixMessage,
+      "A remediation proposal can be generated for review. It will not be applied automatically."
+    );
 
-    els.requestFix.disabled =
-      state.demo ||
-      !state.projectId;
+    els.requestFix.disabled = false;
 
-    els.requestFix.textContent =
-      state.demo
-        ? "Unavailable in demo"
-        : "Request fix proposal";
+    setText(
+      els.requestFix,
+      "Request fix proposal"
+    );
 
     els.findingModal.hidden = false;
 
@@ -3763,7 +3969,8 @@
     document.body.classList.remove("modal-open");
 
     if (
-      state.previousModalFocus?.focus
+      state.previousModalFocus &&
+      typeof state.previousModalFocus.focus === "function"
     ) {
       state.previousModalFocus.focus();
     }
@@ -3771,24 +3978,26 @@
     state.currentFinding = null;
   }
 
-  // ============================================================
-  // AI REMEDIATION PROPOSALS
-  // ============================================================
+  // =========================================================================
+  // 32. REMEDIATION PROPOSAL
+  // =========================================================================
 
   async function requestFixProposal() {
     const finding = state.currentFinding;
 
-    if (!finding || state.demo) {
-      return;
-    }
+    if (!finding || !state.projectId) return;
 
     els.requestFix.disabled = true;
 
-    els.requestFix.textContent =
-      "Preparing proposal…";
+    setText(
+      els.requestFix,
+      "Preparing proposal…"
+    );
 
-    els.fixMessage.textContent =
-      "Requesting a fix proposal from the Phase 4 backend…";
+    setText(
+      els.fixMessage,
+      "Requesting a source-specific remediation proposal from the backend."
+    );
 
     try {
       const { data } = await apiRequest(
@@ -3812,258 +4021,102 @@
         data?.result ||
         data;
 
-      const patchText =
-        typeof proposal === "string"
-          ? proposal
-          : text(
-              proposal?.diff ||
-              proposal?.patch ||
-              proposal?.code ||
-              proposal?.content,
+      const diff = safeText(
+        proposal?.diff ||
+        proposal?.patch ||
+        proposal?.proposed_content ||
+        proposal?.code ||
+        proposal?.content ||
+        (typeof proposal === "string" ? proposal : ""),
+        "The backend returned no diff text."
+      );
 
-              "The backend returned a proposal without a textual diff."
-            );
-
-      els.patchPreviewText.textContent =
-        patchText;
+      els.patchPreviewText.textContent = diff;
 
       els.patchPreview.hidden = false;
 
-      els.fixMessage.textContent = text(
-        data?.message,
-
-        "Fix proposal prepared. Review the patch before any approval or application step."
+      setText(
+        els.fixMessage,
+        data?.message ||
+        "Proposal prepared. Review it carefully. No original project source was modified."
       );
 
-      els.requestFix.textContent =
-        "Proposal prepared";
+      setText(
+        els.requestFix,
+        "Proposal prepared"
+      );
+
+      addActivity(
+        "Fix proposal prepared",
+        `A proposed fix was generated for ${finding.id}. No source file was changed.`,
+        "✎"
+      );
 
       showToast(
         "Fix proposal received. It has not been applied.",
         "success"
       );
 
-      addActivity(
-        "Fix proposal prepared",
-        `A proposal was returned for ${finding.id}. No source files were changed by this action.`,
-        "✎"
+    } catch (error) {
+      setText(
+        els.fixMessage,
+        friendlyError(error)
       );
 
-    } catch (error) {
-      els.fixMessage.textContent =
-        friendlyApiError(error);
-
-      els.requestFix.textContent =
-        "Request fix proposal";
+      setText(
+        els.requestFix,
+        "Request fix proposal"
+      );
 
       showToast(
-        friendlyApiError(error),
+        friendlyError(error),
         "error"
       );
 
     } finally {
-      if (
-        state.currentFinding?.id === finding.id
-      ) {
-        els.requestFix.disabled = false;
-      }
+      els.requestFix.disabled = false;
     }
   }
 
-  // ============================================================
-  // CODE GENERATION
-  // ============================================================
+  // =========================================================================
+  // 33. COPY FILE CONTENTS
+  // =========================================================================
 
-  async function generateCode() {
-    if (
-      !state.projectLoaded ||
-      state.demo ||
-      state.activeJob
-    ) {
-      return;
-    }
-
-    const prompt = els.prompt.value.trim();
-
-    if (prompt.length < 8) {
-      setInlineError(
-        els.buildError,
-
-        "Describe the implementation task before generating code, or choose one of the suggested tasks."
-      );
-
-      els.prompt.focus();
-
-      return;
-    }
-
-    if (prompt.length > 12000) {
-      setInlineError(
-        els.buildError,
-
-        "The implementation instructions exceed the 12,000-character limit."
-      );
-
-      return;
-    }
-
-    await beginJob({
-      kind: "build",
-
-      path: API.generate(state.projectId),
-
-      body: {
-        prompt,
-
-        mode: "build",
-
-        source_phase: 3,
-
-        project_id: state.projectId,
-
-        project_context: {
-          original_idea: state.project.idea,
-
-          framework: state.project.framework,
-
-          database: state.project.database,
-
-          root_name: state.project.rootName,
-
-          project_summary: state.project.summary,
-
-          folders: state.project.folders,
-
-          master_prompt: state.project.masterPrompt
-        }
-      }
-    });
-  }
-
-  // ============================================================
-  // SECURITY SCAN
-  // ============================================================
-
-  async function runSecurityScan() {
-    if (
-      !state.projectLoaded ||
-      state.demo ||
-      state.activeJob
-    ) {
-      return;
-    }
-
-    els.scanButton.disabled = true;
-
-    els.scanButton.classList.add(
-      "is-loading"
+  async function copySelectedFile() {
+    const file = state.files.get(
+      state.selectedFile
     );
 
-    els.scanButton.querySelector(".button-label").textContent =
-      "Starting assessment…";
-
-    try {
-      await beginJob({
-        kind: "security",
-
-        path: API.scan(state.projectId),
-
-        body: {
-          scope: "project",
-
-          profile: "baseline",
-
-          source_phase: 4
-        }
-      });
-
-    } finally {
-      syncJobControls();
-    }
-  }
-
-  // ============================================================
-  // REFRESH SECURITY REPORT
-  // ============================================================
-
-  async function refreshSecurityReport() {
-    if (
-      !state.projectId ||
-      state.demo
-    ) {
+    if (!file || typeof file.content !== "string") {
       return;
     }
 
     try {
-      const { data } = await apiRequest(
-        API.report(state.projectId),
-        {
-          method: "GET"
-        }
+      await navigator.clipboard.writeText(
+        file.content
       );
 
-      const candidate =
-        data?.security_report ||
-        data?.report ||
-        data;
+      showToast(
+        "File contents copied.",
+        "success"
+      );
 
-      if (
-        !candidate ||
-        typeof candidate !== "object" ||
-        (
-          !Array.isArray(candidate.findings) &&
-          !Array.isArray(candidate.issues) &&
-          !candidate.coverage &&
-          !candidate.checks &&
-          !candidate.coverage_summary
-        )
-      ) {
-        return;
-      }
-
-      state.report = normalizeReport(candidate);
-
-      els.sidebarScanStatus.textContent =
-        "Available";
-
-      renderSecurityReport();
-
-    } catch (error) {
-      if (error.status !== 404) {
-        showToast(
-          friendlyApiError(error),
-          "error"
-        );
-      }
+    } catch {
+      showToast(
+        "Clipboard permission was blocked. Copy the code from the preview manually.",
+        "error"
+      );
     }
   }
 
-  // ============================================================
-  // SAFE DOWNLOAD FILENAME
-  // ============================================================
-
-  function safeDownloadName(
-    value,
-    fallback = "phase4-project"
-  ) {
-    const cleaned = String(value || "")
-      .normalize("NFKC")
-      .replace(/[\\/:*?"<>|\u0000-\u001F]/g, "-")
-      .replace(/\s+/g, "-")
-      .replace(/\.+$/g, "")
-      .slice(0, 90);
-
-    return cleaned || fallback;
-  }
-
-  // ============================================================
-  // PROJECT EXPORT
-  // ============================================================
+  // =========================================================================
+  // 34. EXPORT PROJECT ZIP
+  // =========================================================================
 
   async function exportProject() {
     if (
       !state.projectId ||
-      state.demo
+      !state.files.size
     ) {
       return;
     }
@@ -4080,14 +4133,12 @@
       }
 
       const response = await fetch(
-        `${API_BASE_URL}${API.exportProject(state.projectId)}`,
-
+        `${API_BASE_URL}${API.export(state.projectId)}`,
         {
           method: "GET",
 
           headers: {
             Authorization: `Bearer ${token}`,
-
             Accept: "application/zip, application/octet-stream, application/json"
           },
 
@@ -4098,13 +4149,15 @@
       if (!response.ok) {
         const data = await parseResponse(response);
 
-        throw new Error(
-          text(
-            data.error || data.message,
-
-            `Export failed with HTTP ${response.status}.`
-          )
+        const error = new Error(
+          data?.error ||
+          data?.message ||
+          `Project export failed with HTTP ${response.status}.`
         );
+
+        error.status = response.status;
+
+        throw error;
       }
 
       const blob = await response.blob();
@@ -4116,7 +4169,7 @@
       link.href = url;
 
       link.download =
-        `${safeDownloadName(state.project?.rootName)}.zip`;
+        `${safeFileName(state.project?.rootName)}.zip`;
 
       document.body.append(link);
 
@@ -4124,24 +4177,25 @@
 
       link.remove();
 
-      window.setTimeout(() => {
-        URL.revokeObjectURL(url);
-      }, 1500);
+      window.setTimeout(
+        () => URL.revokeObjectURL(url),
+        1500
+      );
+
+      addActivity(
+        "Project exported",
+        "The project ZIP archive was downloaded.",
+        "↓"
+      );
 
       showToast(
         "Project export downloaded.",
         "success"
       );
 
-      addActivity(
-        "Project exported",
-        "A project archive was downloaded.",
-        "↓"
-      );
-
     } catch (error) {
       showToast(
-        friendlyApiError(error),
+        friendlyError(error),
         "error"
       );
 
@@ -4150,66 +4204,58 @@
     }
   }
 
-  // ============================================================
-  // SECURITY REPORT EXPORT
-  // ============================================================
+  // =========================================================================
+  // 35. EXPORT SECURITY REPORT JSON
+  // =========================================================================
 
   function exportSecurityReport() {
-    if (!state.report) {
-      return;
-    }
+    if (!state.report) return;
 
     const payload = {
       schema_version: "phase4.security-report.v1",
 
       project_id: state.projectId,
 
-      project_name: getProjectDisplayName(),
+      project_name: state.project?.name || "",
 
       generated_at: state.report.generatedAt,
 
       status: state.report.status,
 
+      source_hash: state.report.sourceHash,
+
+      summary: state.report.summary,
+
       findings: state.findings.map((finding) => ({
         id: finding.id,
-
+        check_id: finding.checkId,
         title: finding.title,
-
         severity: finding.severity,
-
         confidence: finding.confidence,
-
         status: finding.status,
-
         file: finding.file,
-
         line: finding.line,
-
-        evidence: finding.description,
-
+        description: finding.description,
+        evidence: finding.evidence,
         attack_scenario: finding.attack,
-
         recommendation: finding.recommendation,
-
         cwe: finding.cwe,
-
-        owasp: finding.owasp
+        owasp: finding.owasp,
+        tool: finding.tool
       })),
 
-      coverage: state.coverage
+      coverage: state.coverage,
+
+      tools: state.report.tools,
+
+      platform_checks: state.report.platformChecks,
+
+      limitations: state.report.limitations
     };
 
     const blob = new Blob(
-      [
-        JSON.stringify(
-          payload,
-          null,
-          2
-        )
-      ],
-      {
-        type: "application/json"
-      }
+      [JSON.stringify(payload, null, 2)],
+      { type: "application/json" }
     );
 
     const url = URL.createObjectURL(blob);
@@ -4219,7 +4265,7 @@
     link.href = url;
 
     link.download =
-      `${safeDownloadName(state.project?.rootName, "project")}-security-report.json`;
+      `${safeFileName(state.project?.rootName)}-security-report.json`;
 
     document.body.append(link);
 
@@ -4227,457 +4273,175 @@
 
     link.remove();
 
-    window.setTimeout(() => {
-      URL.revokeObjectURL(url);
-    }, 1500);
+    window.setTimeout(
+      () => URL.revokeObjectURL(url),
+      1500
+    );
 
     showToast(
-      "Security report exported as JSON.",
+      "Security report exported.",
       "success"
     );
   }
 
-  // ============================================================
-  // COPY SELECTED FILE
-  // ============================================================
-
-  async function copySelectedFile() {
-    const file = state.files.get(
-      state.selectedFilePath
-    );
-
-    if (!file?.content) {
-      return;
-    }
-
-    try {
-      await navigator.clipboard.writeText(
-        file.content
-      );
-
-      showToast(
-        "File contents copied.",
-        "success"
-      );
-
-    } catch {
-      showToast(
-        "Clipboard access was blocked. Select the file text and copy it manually.",
-        "error"
-      );
-    }
-  }
-
-  // ============================================================
-  // EMPTY AND WORKSPACE STATES
-  // ============================================================
-
-  function showEmptyState(
-    message = "",
-    tone = "error"
-  ) {
-    els.empty.hidden = false;
-
-    els.workspace.hidden = true;
-
-    setInlineError(
-      els.emptyError,
-      message
-    );
-
-    els.emptyError.classList.toggle(
-      "is-neutral",
-      tone === "neutral"
-    );
-  }
-
-  function showWorkspace() {
-    els.empty.hidden = true;
-
-    els.workspace.hidden = false;
-  }
-
-  // ============================================================
-  // PROJECT LOADING
-  // ============================================================
-
-  async function loadProject() {
-    clearJobPolling();
-
-    setInlineError(
-      els.emptyError,
-      ""
-    );
-
-    state.projectLoaded = false;
-
-    // --------------------------------------------------------
-    // DEMO MODE
-    // --------------------------------------------------------
-
-    if (state.demo) {
-      const sample = getDemoProject();
-
-      state.projectId =
-        sample.project_id;
-
-      state.project =
-        normalizeProject(sample);
-
-      state.tree = buildTreeModel(
-        state.project.folders,
-        state.project.rootName
-      );
-
-      loadGeneratedFiles(
-        state.project.generatedFiles
-      );
-
-      state.projectLoaded = true;
-
-      state.activity = [];
-
-      els.connection.lastChild.textContent =
-        " DEMO MODE";
-
-      setConnection(
-        "Demo preview",
-        "neutral"
-      );
-
-      showWorkspace();
-
-      renderProjectSummary();
-
-      renderFileTree();
-
-      if (state.files.size) {
-        selectFile(
-          state.files.keys().next().value
-        );
-      }
-
-      state.report = normalizeReport(
-        sample.security_report
-      );
-
-      renderSecurityReport();
-
-      els.assessmentStatus.textContent =
-        "Sample report";
-
-      els.assessmentSubtext.textContent =
-        "These are illustrative findings, not scan results.";
-
-      els.assessmentIcon.classList.add(
-        "is-warning"
-      );
-
-      els.lastScan.textContent =
-        "Last scan: DEMO DATA";
-
-      els.sidebarScanStatus.textContent =
-        "Demo only";
-
-      els.findingsSummary.textContent =
-        "Sample findings for interface preview only — no scanner was run.";
-
-      els.reportSummaryTitle.textContent =
-        "Demo report preview";
-
-      els.reportSummaryText.textContent =
-        "Illustrative sample data. This is not a security assessment of a real project.";
-
-      els.projectOrigin.textContent =
-        "DEMO PREVIEW — SAMPLE DATA";
-
-      els.footerStatus.textContent =
-        "Demo mode · API actions disabled";
-
-      addActivity(
-        "Demo workspace opened",
-        "Sample project content is displayed for interface preview only.",
-        "◈",
-        new Date().toISOString()
-      );
-
-      return;
-    }
-
-    // --------------------------------------------------------
-    // NO PROJECT ID
-    // --------------------------------------------------------
-
-    if (!state.projectId) {
-      showEmptyState();
-
-      setConnection(
-        "No project",
-        "neutral"
-      );
-
-      return;
-    }
-
-    // --------------------------------------------------------
-    // LOAD ACTUAL PROJECT
-    // --------------------------------------------------------
-
-    showEmptyState(
-      "Loading your saved Phase 3 blueprint…",
-      "neutral"
-    );
-
-    setConnection(
-      "Loading",
-      "neutral"
-    );
-
-    try {
-      const { data } = await apiRequest(
-        API.project(state.projectId),
-        {
-          method: "GET"
-        }
-      );
-
-      state.project =
-        normalizeProject(data);
-
-      if (!state.project.id) {
-        state.project.id =
-          state.projectId;
-      }
-
-      if (!state.project.folders.length) {
-        throw new Error(
-          "The saved blueprint was found, but it did not contain a structured folders array. Phase 4 needs the Phase 3 folder manifest, not only the ASCII tree preview."
-        );
-      }
-
-      state.tree = buildTreeModel(
-        state.project.folders,
-        state.project.rootName
-      );
-
-      loadGeneratedFiles(
-        state.project.generatedFiles
-      );
-
-      state.projectLoaded = true;
-
-      loadSavedActivity();
-
-      state.report = state.project.report
-        ? normalizeReport(state.project.report)
-        : null;
-
-      showWorkspace();
-
-      setConnection(
-        "Connected",
-        "online"
-      );
-
-      renderProjectSummary();
-
-      renderFileTree();
-
-      if (state.files.size) {
-        selectFile(
-          state.files.keys().next().value
-        );
-      }
-
-      renderActivity();
-
-      if (state.report) {
-        renderSecurityReport();
-
-      } else {
-        els.criticalHigh.textContent = "—";
-        els.mediumLow.textContent = "—";
-        els.notTested.textContent = "—";
-      }
-
-      await refreshSecurityReport();
-
-      // Resume existing background job if it belongs
-      // to the currently loaded project.
-      if (restoreActiveJob()) {
-        syncJobControls();
-
-        setAgentState(
-          "Resuming",
-          "running",
-          "An active job from this project was recovered from this browser session."
-        );
-
-        els.agentMessage.textContent =
-          `Resuming ${state.activeJob.kind} job ${state.activeJob.id}…`;
-
-        pollJob();
-      }
-
-      addActivity(
-        "Phase 3 blueprint imported",
-
-        `${state.project.framework} · ${state.project.database} · ${state.tree.fileCount} planned files.`,
-
-        "↗",
-
-        state.project.createdAt ||
-          new Date().toISOString()
-      );
-
-      announce(
-        `Project ${getProjectDisplayName()} loaded successfully.`
-      );
-
-    } catch (error) {
-      state.projectLoaded = false;
-
-      setConnection(
-        "Backend unavailable",
-        "offline"
-      );
-
-      showEmptyState(
-        friendlyApiError(error)
-      );
-
-      els.emptyError.hidden = false;
-    }
-  }
-
-  // ============================================================
-  // EVENT HANDLERS
-  // ============================================================
+  // =========================================================================
+  // 36. EVENT BINDING
+  // =========================================================================
 
   function bindEvents() {
     bindNavigation();
 
-    // Project refresh and retry.
-    els.refresh.addEventListener(
-      "click",
-      loadProject
-    );
-
-    els.retryLoad.addEventListener(
-      "click",
-      loadProject
-    );
-
-    // Prompt character counter.
-    els.prompt.addEventListener(
+    // Master prompt.
+    els.masterPrompt?.addEventListener(
       "input",
       () => {
-        els.promptCount.textContent =
-          `${els.prompt.value.length.toLocaleString()} / 12,000`;
+        setText(
+          els.masterPromptCount,
+          `${els.masterPrompt.value.length.toLocaleString()} / ${CONFIG.maxMasterPromptLength.toLocaleString()}`
+        );
 
-        if (!els.buildError.hidden) {
-          setInlineError(
-            els.buildError,
-            ""
-          );
+        updateAnalyzeButton();
+
+        if (!els.emptyError.hidden) {
+          setError(els.emptyError, "");
         }
       }
     );
 
-    // Suggested prompts.
-    document.querySelectorAll("[data-prompt]").forEach((button) => {
-      button.addEventListener(
-        "click",
-        () => {
-          els.prompt.value =
-            button.dataset.prompt || "";
+    els.masterPromptConsent?.addEventListener(
+      "change",
+      updateAnalyzeButton
+    );
 
-          els.prompt.dispatchEvent(
-            new Event(
-              "input",
-              {
-                bubbles: true
-              }
-            )
-          );
+    els.analyzeButton?.addEventListener(
+      "click",
+      analyzeMasterPrompt
+    );
 
-          els.prompt.focus();
+    // New project and reload.
+    els.newProject?.addEventListener(
+      "click",
+      startNewProject
+    );
+
+    els.refresh?.addEventListener(
+      "click",
+      loadProject
+    );
+
+    els.retryLoad?.addEventListener(
+      "click",
+      loadProject
+    );
+
+    // Manifest review gate.
+    els.manifestReviewed?.addEventListener(
+      "change",
+      syncControls
+    );
+
+    // Development prompt.
+    els.developerPrompt?.addEventListener(
+      "input",
+      () => {
+        setText(
+          els.promptCount,
+          `${els.developerPrompt.value.length.toLocaleString()} / ${CONFIG.maxTaskPromptLength.toLocaleString()}`
+        );
+
+        if (!els.buildError.hidden) {
+          setError(els.buildError, "");
         }
-      );
+      }
+    );
+
+    // Suggested task buttons.
+    document.querySelectorAll("[data-prompt]").forEach((button) => {
+      button.addEventListener("click", () => {
+        els.developerPrompt.value =
+          button.dataset.prompt || "";
+
+        els.developerPrompt.dispatchEvent(
+          new Event("input", { bubbles: true })
+        );
+
+        els.developerPrompt.focus();
+      });
     });
 
-    // Code generation.
-    els.buildButton.addEventListener(
+    // Build, security scan and cancellation.
+    els.buildButton?.addEventListener(
       "click",
       generateCode
     );
 
-    // Job cancellation.
-    els.cancelJob.addEventListener(
-      "click",
-      cancelCurrentJob
-    );
-
-    els.cancelSecurityJob.addEventListener(
-      "click",
-      cancelCurrentJob
-    );
-
-    // Security assessment.
-    els.scanButton.addEventListener(
+    els.scanButton?.addEventListener(
       "click",
       runSecurityScan
     );
 
+    els.cancelJob?.addEventListener(
+      "click",
+      cancelCurrentJob
+    );
+
+    els.cancelSecurityJob?.addEventListener(
+      "click",
+      cancelCurrentJob
+    );
+
     // File explorer.
-    els.fileSearch.addEventListener(
+    els.fileSearch?.addEventListener(
       "input",
       () => {
-        renderFileTree(
-          els.fileSearch.value
-        );
+        renderFileTree(els.fileSearch.value);
       }
     );
 
-    els.copyFile.addEventListener(
+    els.copyFile?.addEventListener(
       "click",
       copySelectedFile
     );
 
-    // Export.
-    els.exportProject.addEventListener(
+    // Exports.
+    els.exportProject?.addEventListener(
       "click",
       exportProject
     );
 
-    els.downloadReport.addEventListener(
+    els.downloadReport?.addEventListener(
       "click",
       exportSecurityReport
     );
 
     // Security filters.
-    els.severityFilter.addEventListener(
+    els.severityFilter?.addEventListener(
       "change",
       renderFindings
     );
 
-    els.findingStatusFilter.addEventListener(
+    els.findingStatusFilter?.addEventListener(
       "change",
       renderFindings
     );
 
-    // Modal actions.
-    els.closeFindingModal.addEventListener(
+    // Remediation modal.
+    els.requestFix?.addEventListener(
+      "click",
+      requestFixProposal
+    );
+
+    els.closeFindingModal?.addEventListener(
       "click",
       closeFinding
     );
 
-    els.closeFindingModalSecondary.addEventListener(
+    els.closeFindingModalSecondary?.addEventListener(
       "click",
       closeFinding
     );
 
-    els.findingModal.addEventListener(
+    els.findingModal?.addEventListener(
       "click",
       (event) => {
         if (event.target === els.findingModal) {
@@ -4686,104 +4450,101 @@
       }
     );
 
-    els.requestFix.addEventListener(
-      "click",
-      requestFixProposal
-    );
-
-    // Modal keyboard accessibility.
+    // Keyboard handling for the modal.
     document.addEventListener(
       "keydown",
       (event) => {
-        if (els.findingModal.hidden) {
+        if (!els.findingModal || els.findingModal.hidden) {
           return;
         }
 
         if (event.key === "Escape") {
           event.preventDefault();
-
           closeFinding();
+          return;
         }
 
-        if (event.key === "Tab") {
-          const focusable = [
-            ...els.findingModal.querySelectorAll(
-              "button:not(:disabled),a[href],input:not(:disabled),textarea:not(:disabled),[tabindex]:not([tabindex='-1'])"
-            )
-          ].filter(
-            (element) =>
-              !element.hidden &&
-              element.offsetParent !== null
-          );
+        if (event.key !== "Tab") return;
 
-          if (!focusable.length) {
-            return;
-          }
+        const focusable = [
+          ...els.findingModal.querySelectorAll(
+            "button:not(:disabled),a[href],input:not(:disabled),textarea:not(:disabled),[tabindex]:not([tabindex='-1'])"
+          )
+        ].filter(
+          (item) =>
+            !item.hidden &&
+            item.offsetParent !== null
+        );
 
-          const first = focusable[0];
+        if (!focusable.length) return;
 
-          const last =
-            focusable[focusable.length - 1];
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
 
-          if (
-            event.shiftKey &&
-            document.activeElement === first
-          ) {
-            event.preventDefault();
+        if (
+          event.shiftKey &&
+          document.activeElement === first
+        ) {
+          event.preventDefault();
+          last.focus();
 
-            last.focus();
-
-          } else if (
-            !event.shiftKey &&
-            document.activeElement === last
-          ) {
-            event.preventDefault();
-
-            first.focus();
-          }
+        } else if (
+          !event.shiftKey &&
+          document.activeElement === last
+        ) {
+          event.preventDefault();
+          first.focus();
         }
       }
     );
 
-    // Stop browser polling when the document unloads.
-    // This does not claim to cancel the server job.
+    // Stop browser polling on unload. This does not cancel the server job.
     window.addEventListener(
       "beforeunload",
-      () => {
-        clearJobPolling();
-      }
+      stopPolling
     );
   }
 
-  // ============================================================
-  // INITIALISATION
-  // ============================================================
+  // =========================================================================
+  // 37. INITIALIZATION
+  // =========================================================================
 
-  function init() {
+  function initialize() {
     bindEvents();
 
-    renderActivity();
-
-    renderAgentSteps(
-      "idle",
-      0
+    setText(
+      els.masterPromptCount,
+      "0 / 50,000"
     );
+
+    setText(
+      els.promptCount,
+      "0 / 12,000"
+    );
+
+    renderAgentSteps("queued", 0);
 
     setAgentState(
       "Idle",
       "neutral",
-      "No active task."
+      "Paste a master prompt to create an independent Phase 4 project."
     );
 
-    els.promptCount.textContent =
-      "0 / 12,000";
+    renderActivity();
+
+    syncControls();
 
     showEmptyState();
 
     loadProject();
+
+    updateAnalyzeButton();
   }
 
-  // Start Phase 4.
-  init();
+  // =========================================================================
+  // 38. START
+  // =========================================================================
+
+  initialize();
 
 })();
