@@ -1,7 +1,6 @@
-
 /* ========================================================================
    WEB / LAB — PHASE 04
-   Same editorial glass language as Phase 1–3, adapted for a development IDE.
+   Editorial glass interface for an AI development workspace.
    Cream #F3EEE3 · Ink #111111 · Burnt Orange #D9541E
    Manrope + Playfair Display + JetBrains Mono
    ======================================================================== */
@@ -3065,5 +3064,189 @@ svg {
 
   body {
     background-attachment: scroll;
+  }
+}
+
+/* ========================================================================
+   PHASE 04 — ACCESSIBILITY, READABILITY AND RESPONSIVE REFINEMENTS
+   These overrides intentionally preserve the existing editorial glass UI.
+   ======================================================================== */
+
+:root {
+  --muted-readable: #5B554E;
+  --primary-readable: #A83D16;
+}
+
+body {
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+/* Improve readability without removing the compact technical aesthetic. */
+.topbar-context,
+.connection-state,
+.brand-copy small,
+.sidebar-eyebrow,
+.nav-label,
+.sidebar-footer,
+.section-kicker,
+.summary-label,
+.summary-facts span,
+.context-lock,
+.tiny-badge,
+.provider-tag,
+.subtle-tag,
+.language-badge,
+.state-pill,
+.step-state,
+.metric-label,
+.finding-filters select,
+.coverage-status,
+.modal-location,
+.detail-block > span,
+.patch-preview > span {
+  font-size: max(9px, 0.72em);
+}
+
+.brand-copy small,
+.sidebar-project-copy small,
+.workspace-heading > div:first-child > p,
+.panel-intro,
+.agent-card-intro,
+.finding-copy > p,
+.finding-meta,
+.activity-copy p,
+.detail-block p,
+.findings-empty p,
+.sidebar-help-card p,
+.view-footnote,
+.inline-note,
+.inline-error {
+  font-size: max(11px, 0.82em);
+}
+
+.nav-item,
+.workspace-tab,
+.primary-button,
+.outline-button,
+.quiet-button,
+.suggestion-chip,
+.text-action,
+.finding-action,
+.cancel-job-button {
+  font-size: max(11px, 0.82em);
+}
+
+.topbar-link,
+.sidebar-status-list > div,
+.sidebar-status-list strong {
+  font-size: max(10px, 0.76em);
+}
+
+.workspace-heading > div:first-child > p,
+.project-description,
+.context-item p,
+.report-summary-text {
+  color: var(--muted-readable);
+}
+
+.section-kicker,
+.sidebar-eyebrow,
+.text-action,
+.sidebar-help-card a {
+  color: var(--primary-readable);
+}
+
+/* Keyboard focus must remain visible in compact/overflowing panels. */
+:focus-visible {
+  outline: 3px solid rgba(168, 61, 22, .72);
+  outline-offset: 3px;
+}
+
+.nav-item[aria-label]:focus-visible {
+  outline-offset: 1px;
+}
+
+/* The tablet sidebar is icon-only visually, but remains named for assistive tech. */
+@media (max-width: 900px) and (min-width: 681px) {
+  .sidebar {
+    height: max(calc(100vh - 70px), 620px);
+  }
+}
+
+/* Keep the mobile dock clear of device safe areas. */
+@media (max-width: 680px) {
+  .workspace-frame {
+    padding-bottom: calc(68px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .sidebar {
+    height: calc(63px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(5px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .nav-item {
+    font-size: 10px;
+    min-height: 50px;
+  }
+
+  .connection-state {
+    min-width: 18px;
+    min-height: 18px;
+  }
+
+  .file-tree-pane,
+  .file-preview-pane,
+  .detail-modal {
+    min-width: 0;
+  }
+}
+
+/* Make long paths, generated code, and AI output safe on narrow screens. */
+.tree-folder-label,
+.finding-title-line strong,
+.finding-meta,
+.activity-copy,
+.activity-item time,
+.report-summary-text,
+.context-item p {
+  overflow-wrap: anywhere;
+}
+
+.code-preview,
+.patch-preview pre {
+  max-width: 100%;
+  overflow: auto;
+  tab-size: 4;
+}
+
+/* Status classes are intentionally differentiated for all scanner outcomes. */
+.coverage-status.failed,
+.coverage-status.error {
+  color: #9B2C25;
+  background: #FCE6E3;
+}
+
+.coverage-status.not-tested,
+.coverage-status.unsupported,
+.coverage-status.skipped,
+.coverage-status.unknown {
+  color: #655B4E;
+  background: rgba(17,17,17,.07);
+}
+
+.coverage-status.passed {
+  color: #176344;
+  background: rgba(38,150,107,.12);
+}
+
+/* Avoid hover lift effects for reduced-motion users. */
+@media (prefers-reduced-motion: reduce) {
+  .panel-card,
+  .glass-panel,
+  .nav-item,
+  .icon-button,
+  .mini-icon-button {
+    transition: none !important;
   }
 }

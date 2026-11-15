@@ -1,4 +1,3 @@
-
 <!doctype html>
 <html lang="en">
 <head>
@@ -51,7 +50,7 @@
           Phase 3
         </a>
 
-        <button id="refreshProjectBtn" class="icon-button" type="button" aria-label="Reload project" title="Reload project">
+        <button id="refreshProjectBtn" class="icon-button" type="button" aria-label="Reload project and refresh job status" title="Reload project">
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M20 7v5h-5M4 17v-5h5"/>
             <path d="M5.6 9A7 7 0 0 1 18 6.5L20 12M4 12l2 5.5A7 7 0 0 0 18.4 15"/>
@@ -83,7 +82,7 @@
 
         <nav class="primary-nav" aria-label="Phase 4 sections">
 
-          <button class="nav-item is-active" type="button" data-view="build" aria-current="page">
+          <button class="nav-item is-active" type="button" data-view="build" aria-label="Open AI Developer view" aria-current="page">
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="m8 8-4 4 4 4M16 8l4 4-4 4M14 5l-4 14"/>
             </svg>
@@ -91,7 +90,7 @@
             <kbd>01</kbd>
           </button>
 
-          <button class="nav-item" type="button" data-view="files">
+          <button class="nav-item" type="button" data-view="files" aria-label="Open Project files view">
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M3.5 6.5h7l2 2h8v10.5H3.5z"/>
               <path d="M3.5 6.5V5h7l2 2"/>
@@ -100,7 +99,7 @@
             <kbd>02</kbd>
           </button>
 
-          <button class="nav-item" type="button" data-view="security">
+          <button class="nav-item" type="button" data-view="security" aria-label="Open Security center">
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M12 3 20 6v5.5c0 4.5-3.1 7.6-8 9.5-4.9-1.9-8-5-8-9.5V6z"/>
               <path d="m8.5 12 2.2 2.2 4.8-5"/>
@@ -109,7 +108,7 @@
             <kbd>03</kbd>
           </button>
 
-          <button class="nav-item" type="button" data-view="reports">
+          <button class="nav-item" type="button" data-view="reports" aria-label="Open Reports and activity">
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M6 3.5h8l4 4v13H6z"/>
               <path d="M14 3.5v4h4M9 12h6M9 15.5h6"/>
@@ -289,19 +288,19 @@
           <!-- WORKSPACE TABS -->
           <div class="workspace-tabs" role="tablist" aria-label="Workspace views">
 
-            <button class="workspace-tab is-active" id="tab-build" type="button" role="tab" aria-selected="true" aria-controls="view-build" data-view="build">
+            <button class="workspace-tab is-active" id="tab-build" type="button" role="tab" aria-selected="true" aria-controls="view-build" tabindex="0" data-view="build">
               <span class="tab-index">01</span> Build
             </button>
 
-            <button class="workspace-tab" id="tab-files" type="button" role="tab" aria-selected="false" aria-controls="view-files" data-view="files">
+            <button class="workspace-tab" id="tab-files" type="button" role="tab" aria-selected="false" aria-controls="view-files" tabindex="-1" data-view="files">
               <span class="tab-index">02</span> Files
             </button>
 
-            <button class="workspace-tab" id="tab-security" type="button" role="tab" aria-selected="false" aria-controls="view-security" data-view="security">
+            <button class="workspace-tab" id="tab-security" type="button" role="tab" aria-selected="false" aria-controls="view-security" tabindex="-1" data-view="security">
               <span class="tab-index">03</span> Security
             </button>
 
-            <button class="workspace-tab" id="tab-reports" type="button" role="tab" aria-selected="false" aria-controls="view-reports" data-view="reports">
+            <button class="workspace-tab" id="tab-reports" type="button" role="tab" aria-selected="false" aria-controls="view-reports" tabindex="-1" data-view="reports">
               <span class="tab-index">04</span> Reports
             </button>
 
@@ -914,7 +913,7 @@
   <!-- FINDING DETAIL MODAL -->
   <div id="findingModal" class="modal-backdrop" hidden>
 
-    <section class="detail-modal" role="dialog" aria-modal="true" aria-labelledby="findingModalTitle" tabindex="-1">
+    <section class="detail-modal" role="dialog" aria-modal="true" aria-labelledby="findingModalTitle" aria-describedby="modalFindingEvidence" tabindex="-1">
 
       <button id="closeFindingModal" class="modal-close" type="button" aria-label="Close finding details">×</button>
 
