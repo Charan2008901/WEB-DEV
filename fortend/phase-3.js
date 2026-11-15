@@ -7,6 +7,11 @@
 const API_BASE_URL = "https://web-dev-backend-g976.onrender.com";
 const GENERATION_TIMEOUT_MS = 110000;
 
+// Phase 3 -> Phase 4 handoff. This is browser-only storage for the prototype.
+// No project table is created and no Google token is saved in localStorage.
+const PHASE4_PROJECT_STORAGE_KEY = "weblab_phase4_current_project_v1";
+const MAX_LOCAL_HANDOFF_CHARS = 3_500_000;
+
 const frameworks = {
   mern: { name: "MERN", label: "MongoDB · Express · React · Node.js", recommendedDb: "mongodb" },
   mean: { name: "MEAN", label: "MongoDB · Express · Angular · Node.js", recommendedDb: "mongodb" },
@@ -473,6 +478,93 @@ function cancelGeneration() {
   }
 }
 
+function createLocalProjectId() {
+  if (window.crypto && typeof window.crypto.randomUUID === "function") {
+    return window.crypto.randomUUID();
+  }
+
+  return `project-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
+}
+
+/**
+ * Save the Phase 3 blueprint in this browser so Phase 4 can import it.
+ * Only blueprint data is stored; authentication tokens and API keys are not.
+ */
+function saveBlueprintForPhase4({
+  idea,
+  frameworkKey,
+  databaseId,
+  databaseName,
+  rootName,
+  summary,
+  folders,
+  tree,
+  masterPrompt
+}) {
+  const projectId = createLocalProjectId();
+  const createdAt = new Date().toISOString();
+  const framework = frameworks[frameworkKey];
+
+  const project = {
+    schema_version: "weblab.phase4.local-project.v1",
+    project_id: projectId,
+    id: projectId,
+    project_name: rootName,
+    name: rootName,
+    root_name: rootName,
+    original_idea: idea,
+    idea,
+    framework: framework?.name || frameworkKey,
+    framework_key: frameworkKey,
+    framework_label: framework?.label || frameworkKey,
+    database: databaseName,
+    database_name: databaseName,
+    database_id: databaseId,
+    project_summary: summary,
+    summary,
+    folders: Array.isArray(folders) ? folders : [],
+    tree_preview: tree,
+    tree,
+    master_prompt: masterPrompt,
+    generated_files: [],
+    security_report: null,
+    created_at: createdAt,
+    updated_at: createdAt,
+    source_phase: 3,
+    storage_mode: "browser-localstorage"
+  };
+
+  try {
+    const serialized = JSON.stringify(project);
+
+    if (serialized.length > MAX_LOCAL_HANDOFF_CHARS) {
+      return {
+        saved: false,
+        projectId,
+        error: "The blueprint is too large for the prototype's local browser storage."
+      };
+    }
+
+    window.localStorage.setItem(PHASE4_PROJECT_STORAGE_KEY, serialized);
+    window.localStorage.setItem(
+      `${PHASE4_PROJECT_STORAGE_KEY}:active_id`,
+      projectId
+    );
+
+    return { saved: true, projectId, project };
+  } catch (error) {
+    console.warn("Phase 3 could not save the Phase 4 handoff locally:", error);
+
+    return {
+      saved: false,
+      projectId,
+      error: error?.name === "QuotaExceededError"
+        ? "Browser storage is full. Clear older site data and generate the blueprint again."
+        : "Browser localStorage is unavailable. Check your browser's site storage settings."
+    };
+  }
+}
+
 async function generateBlueprint() {
   if (!pendingIdea || isGenerating) return;
 
@@ -576,6 +668,19 @@ async function generateBlueprint() {
       tree: latestTree
     });
 
+    const phase4Handoff = saveBlueprintForPhase4({
+      idea: pendingIdea,
+      frameworkKey: pendingFramework,
+      databaseId: selectedDatabase,
+      databaseName: actualDatabaseName,
+      rootName: root,
+      summary: data.project_summary ||
+        "A project blueprint based on the idea provided.",
+      folders: data.folders,
+      tree: latestTree,
+      masterPrompt: latestPrompt
+    });
+
     document.getElementById("resultProjectName").textContent =
       `${root} — project blueprint`;
 
@@ -607,8 +712,9 @@ async function generateBlueprint() {
     document.getElementById("resultSubtitle").textContent =
       "Review the generated architecture and copy either output into your workflow.";
 
-    document.getElementById("statusMessage").textContent =
-      "Blueprint generated. Review the structure and prompt before implementing or deploying.";
+    document.getElementById("statusMessage").textContent = phase4Handoff.saved
+      ? "Blueprint generated and saved in this browser for Phase 4."
+      : `Blueprint generated, but the Phase 4 local handoff was not saved: ${phase4Handoff.error}`;
 
     generationSkeleton.hidden = true;
     generationError.hidden = true;

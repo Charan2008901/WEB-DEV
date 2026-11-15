@@ -2140,3 +2140,11 @@ if __name__ == "__main__":
         app.logger.warning("Refusing debug mode on a public interface; disabling debug.")
         debug = False
     app.run(host=host, port=int(os.getenv("PORT", "5000")), debug=debug)
+
+# --------------------------------------------------
+# PHASE 4 REGISTRATION
+# --------------------------------------------------
+
+from phase4 import register_phase4
+
+register_phase4(app)    
